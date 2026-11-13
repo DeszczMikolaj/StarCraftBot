@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Experiment outputs (kept locally, not versioned)
+runs/
+replays/
+checkpoints/
+
+# Editors / OS
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Local environment overrides
+.env

@@ -1,0 +1,27 @@
+name: starcraftbot
+
+services:
+  # Headless StarCraft II + Python. Usage:
+  #   docker compose run --rm sc2 python -m scbot.doctor
+  #   docker compose run --rm sc2 python -m scbot.train_q --episodes 50
+  sc2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: starcraftbot/sc2:4.10
+    init: true # reaps SC2 processes left behind by finished games
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+
+  # TensorBoard for the training logs in ./runs  ->  http://localhost:6006
+  #   docker compose up tensorboard
+  tensorboard:
+    image: starcraftbot/sc2:4.10
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    ports:
+      - "127.0.0.1:6006:6006"
+    command: ["tensorboard", "--logdir", "runs", "--host", "0.0.0.0", "--port", "6006"]
+    profiles: ["tools"]

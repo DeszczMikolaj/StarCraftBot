@@ -1,0 +1,59 @@
+[project]
+name = "scbot"
+version = "0.1.0"
+description = "Macro-level StarCraft II agents (tabular Q-learning, DQN, PPO) on a shared python-sc2 environment"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "burnysc2==7.3.0",
+    "gymnasium>=1.0",
+    "numpy>=2.0",
+    "tensorboard>=2.18",
+    # Same minor version on every platform (the cu126 index tops out at 2.14.x).
+    "torch>=2.14,<2.15",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scbot"]
+
+# PyTorch wheels: CUDA build on Windows (training on the host GPU),
+# CPU build on Linux (the headless Docker image, keeps the image small).
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu126", marker = "sys_platform == 'win32'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "sc2: needs a StarCraft II installation (run inside the Docker image or with the Windows client)",
+]
+addopts = "-m 'not sc2'"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
