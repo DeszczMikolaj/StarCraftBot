@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+import numpy as np
 from sc2.bot_ai import BotAI
 from sc2.data import Result
 from sc2.ids.unit_typeid import UnitTypeId
@@ -13,17 +14,23 @@ from sc2.unit import Unit
 from scbot.config import EnvConfig
 from scbot.env.actions import ACTION_NAMES, NUM_ACTIONS, MacroAction
 from scbot.env.bridge import DecisionBridge, StepData
+from scbot.env.decision_points import decision_due
 from scbot.env.macro import ArmyMode, MacroExecutor
 from scbot.env.observation import to_vector
 from scbot.env.reward import REWARD_COMPONENTS, RewardCounters, RewardTracker
 
 
 class MacroBot(BotAI):
-    """Plays one game, asking ``bridge`` for a macro action every few game loops.
+    """Plays one game, asking ``bridge`` for a macro action at every decision point.
 
-    At each decision point the bot reads the game state, hands the observation and the
+    At a decision point the bot reads the game state, hands the observation and the
     reward earned since the previous decision to the bridge, waits for the chosen
     action and passes it to the scripted macro layer.
+
+    Decision points are event-driven (see ``decision_points.py``): the agent is not
+    asked when NO_OP is the only available action, and choosing NO_OP means waiting
+    until a new option appears or ``wait_intervals`` have passed. The time between two
+    decision points therefore varies; it is reported as ``info["intervals_elapsed"]``.
     """
 
     def __init__(self, bridge: DecisionBridge, config: EnvConfig) -> None:
@@ -37,6 +44,8 @@ class MacroBot(BotAI):
         self._action_counts = [0] * NUM_ACTIONS
         self._invalid_actions = 0
         self._last_action_executed = True
+        self._last_decision_loop: int | None = None
+        self._declined_mask: np.ndarray | None = None  # options on offer at the last NO_OP
         self._episode_return = 0.0
         self._reward_totals = dict.fromkeys(REWARD_COMPONENTS, 0.0)
 
@@ -53,7 +62,9 @@ class MacroBot(BotAI):
     async def on_step(self, iteration: int) -> None:
         macro = self._require_macro()
         if iteration % self._config.decision_interval == 0:
-            await self._decide(macro)
+            mask = macro.available_actions()
+            if self._decision_due(mask):
+                await self._decide(macro, mask)
         await macro.housekeeping(iteration)
 
     async def on_end(self, game_result: Result) -> None:
@@ -64,7 +75,7 @@ class MacroBot(BotAI):
         reward, components = self._rewards.finish(self._reward_counters(), result)
         self._account(reward, components)
         truncated = result == "Tie"  # only the game time limit produces a tie here
-        info = self._info(components)
+        info = self._info(components, self._macro.available_actions())
         info["result"] = result
         info["episode"] = self._episode_summary(result)
         self._bridge.finish(
@@ -79,7 +90,23 @@ class MacroBot(BotAI):
 
     # ------------------------------------------------------------------ decision point
 
-    async def _decide(self, macro: MacroExecutor) -> None:
+    def _intervals_since_decision(self) -> float | None:
+        """Game time since the previous decision point, in decision intervals."""
+        if self._last_decision_loop is None:
+            return None
+        elapsed_loops = self.state.game_loop - self._last_decision_loop
+        return elapsed_loops / self._config.loops_per_interval
+
+    def _decision_due(self, mask: np.ndarray) -> bool:
+        return decision_due(
+            mask,
+            self._declined_mask,
+            self._intervals_since_decision(),
+            wait_intervals=self._config.wait_intervals,
+            max_idle_intervals=self._config.max_idle_intervals,
+        )
+
+    async def _decide(self, macro: MacroExecutor, mask: np.ndarray) -> None:
         counters = self._reward_counters()
         if self._decisions == 0:
             # Baseline for the shaping terms: units present at game start earn nothing.
@@ -89,7 +116,7 @@ class MacroBot(BotAI):
             reward, components = self._rewards.step(counters)
         self._account(reward, components)
 
-        info = self._info(components)
+        info = self._info(components, mask)
         step = StepData(
             obs=to_vector(info["raw"]),
             reward=reward,
@@ -99,6 +126,8 @@ class MacroBot(BotAI):
         )
         action = MacroAction(self._bridge.decide(step))
 
+        self._last_decision_loop = int(self.state.game_loop)
+        self._declined_mask = mask.copy() if action is MacroAction.NO_OP else None
         self._last_action_executed = await macro.execute(action)
         self._decisions += 1
         self._action_counts[action] += 1
@@ -169,14 +198,14 @@ class MacroBot(BotAI):
             value_lost=float(value_lost),
         )
 
-    def _info(self, reward_components: dict[str, float]) -> dict[str, Any]:
-        macro = self._require_macro()
+    def _info(self, reward_components: dict[str, float], mask: np.ndarray) -> dict[str, Any]:
         return {
             "raw": self._read_raw(),
-            "action_mask": macro.available_actions(),
+            "action_mask": mask,
             "reward_components": reward_components,
             "last_action_executed": self._last_action_executed,
             "game_loop": int(self.state.game_loop),
+            "intervals_elapsed": self._intervals_since_decision() or 0.0,
             "decision": self._decisions,
         }
 

@@ -32,8 +32,15 @@ class Agent(ABC):
         next_obs: np.ndarray,
         next_action_mask: np.ndarray,
         terminated: bool,
+        intervals_elapsed: float = 1.0,
     ) -> None:
-        """Learn from one transition. ``terminated`` is False when a game was only truncated."""
+        """Learn from one transition.
+
+        ``terminated`` is False when a game was only truncated by the time limit.
+        ``intervals_elapsed`` is the game time between ``obs`` and ``next_obs`` in
+        decision intervals. It varies from step to step, so discount the value of the
+        next state with ``gamma ** intervals_elapsed``.
+        """
         return None
 
     def end_episode(self) -> None:

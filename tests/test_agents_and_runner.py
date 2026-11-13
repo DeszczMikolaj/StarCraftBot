@@ -82,6 +82,7 @@ class FakeEnv:
         info = {
             "action_mask": np.ones(NUM_ACTIONS, dtype=bool),
             "raw": {"decision": self._decision},
+            "intervals_elapsed": 2.0 if self._decision else 0.0,
         }
         terminated = self._decision == self.length
         if terminated:
@@ -117,13 +118,17 @@ class FakeEnv:
 class RecordingAgent(Agent):
     def __init__(self) -> None:
         self.transitions: list[tuple] = []
+        self.elapsed: list[float] = []
         self.episodes_ended = 0
 
     def act(self, obs, action_mask, *, explore):
         return MacroAction.TRAIN_SCV
 
-    def observe(self, obs, action, reward, next_obs, next_action_mask, terminated):
+    def observe(
+        self, obs, action, reward, next_obs, next_action_mask, terminated, intervals_elapsed=1.0
+    ):
         self.transitions.append((action, reward, terminated))
+        self.elapsed.append(intervals_elapsed)
 
     def end_episode(self):
         self.episodes_ended += 1
@@ -150,6 +155,7 @@ def test_run_episode_feeds_every_transition_to_a_learning_agent():
         (MacroAction.TRAIN_SCV, 1.0, False),
         (MacroAction.TRAIN_SCV, 1.0, True),
     ]
+    assert agent.elapsed == [2.0, 2.0, 2.0]  # step lengths reported by the environment
     assert agent.episodes_ended == 1
     assert [step.decision for step in steps] == [0, 1, 2]
     assert [step.info["raw"]["decision"] for step in steps] == [0, 1, 2]

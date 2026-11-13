@@ -113,6 +113,20 @@ def test_terminal_transition_does_not_bootstrap():
     assert agent.q[agent.discretizer(s)][MacroAction.ATTACK] == pytest.approx(1.0)
 
 
+def test_longer_steps_are_discounted_more():
+    """Waiting several intervals must look worse than reaching the same state at once."""
+    agent = TabularQAgent(QLearningConfig(alpha=1.0, gamma=0.9))
+    s, s_next = observation(minerals=0), observation(minerals=400)
+    agent.q[agent.discretizer(s_next)] = np.full(NUM_ACTIONS, 10.0)
+
+    agent.observe(s, MacroAction.TRAIN_MARINE, 0.0, s_next, ALL_ACTIONS, False, 1.0)
+    agent.observe(s, MacroAction.NO_OP, 0.0, s_next, ALL_ACTIONS, False, 3.0)
+
+    row = agent.q[agent.discretizer(s)]
+    assert row[MacroAction.TRAIN_MARINE] == pytest.approx(0.9 * 10.0)
+    assert row[MacroAction.NO_OP] == pytest.approx(0.9**3 * 10.0)
+
+
 # ---------------------------------------------------------------- acting
 
 

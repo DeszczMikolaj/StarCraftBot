@@ -113,6 +113,7 @@ def run_episodes(
                     step.obs,
                     step.info["action_mask"],
                     step.terminated,
+                    float(step.info.get("intervals_elapsed", 1.0)),
                 )
             if on_step is not None:
                 record = StepRecord(

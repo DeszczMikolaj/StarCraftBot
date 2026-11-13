@@ -55,7 +55,7 @@ def main() -> None:
     parser.add_argument(
         "--print-every",
         type=int,
-        default=25,
+        default=10,
         help="print the readings every N decisions (default: %(default)s)",
     )
     args = parser.parse_args()
@@ -64,8 +64,8 @@ def main() -> None:
     agent = build_agent(args)
     print(
         f"map={config.map_name} opponent={config.difficulty} agent={agent.name} "
-        f"decision every {config.loops_per_decision} game loops "
-        f"({config.seconds_per_decision:.2f} s of game time)"
+        f"decision interval {config.loops_per_interval} game loops "
+        f"({config.seconds_per_interval:.2f} s of game time)"
     )
     print("starting StarCraft II...", flush=True)
 

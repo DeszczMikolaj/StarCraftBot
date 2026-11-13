@@ -2,6 +2,7 @@
 
     python -m scbot.doctor            # packages, StarCraft II installation, maps
     python -m scbot.doctor --launch   # additionally start the game and play a few steps
+    python -m scbot.doctor --list-maps
 
 Exits with status 1 when a required check fails.
 """
@@ -90,17 +91,39 @@ def check_game(report: Report, map_name: str) -> bool:
     builds = sorted(p.name for p in versions.iterdir() if p.name.startswith("Base"))
     report.add(OK, "StarCraft II", f"{base} ({source}), builds: {', '.join(builds)}")
 
-    maps_dir = base / "maps" if (base / "maps").exists() else base / "Maps"
-    found = sorted(maps_dir.glob(f"**/{map_name}.SC2Map")) if maps_dir.is_dir() else []
-    if not found:
+    maps = installed_maps(base)
+    if map_name not in maps:
         report.add(
             FAIL,
             "map",
-            f"{map_name}.SC2Map not found under {maps_dir} (see the map installation runbook)",
+            f"{map_name}.SC2Map not found under {maps_directory(base)} "
+            "(see the map installation runbook)",
         )
         return False
-    report.add(OK, "map", str(found[0]))
+    report.add(OK, "map", str(maps[map_name]))
     return True
+
+
+def maps_directory(base: Path) -> Path:
+    return base / "maps" if (base / "maps").exists() else base / "Maps"
+
+
+def installed_maps(base: Path) -> dict[str, Path]:
+    """Maps python-sc2 can load by name: files in the maps folder and one level below it."""
+    maps_dir = maps_directory(base)
+    if not maps_dir.is_dir():
+        return {}
+    candidates = [*maps_dir.glob("*.SC2Map"), *maps_dir.glob("*/*.SC2Map")]
+    return {path.stem: path for path in sorted(candidates, reverse=True)}
+
+
+def list_maps() -> None:
+    base = find_sc2_base()
+    maps = installed_maps(base)
+    if not maps:
+        raise SystemExit(f"no maps found under {maps_directory(base)}")
+    for name in sorted(maps):
+        print(f"{name:<32} {maps[name].parent.name}")
 
 
 def check_launch(report: Report, map_name: str) -> None:
@@ -135,7 +158,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--launch", action="store_true", help="also start the game")
     parser.add_argument("--map", default=EnvConfig().map_name, help="map to look for")
+    parser.add_argument(
+        "--list-maps", action="store_true", help="print the installed maps and exit"
+    )
     args = parser.parse_args()
+    if args.list_maps:
+        list_maps()
+        return
 
     report = Report()
     check_python(report)

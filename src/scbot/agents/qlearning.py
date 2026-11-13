@@ -4,9 +4,11 @@ The continuous observation vector is reduced to a small discrete state by puttin
 handful of features into buckets. The Q-table maps each visited state to one value per
 macro action and is updated with the one-step Q-learning rule
 
-    Q(s, a) <- Q(s, a) + alpha * (r + gamma * max_a' Q(s', a') - Q(s, a))
+    Q(s, a) <- Q(s, a) + alpha * (r + gamma^dt * max_a' Q(s', a') - Q(s, a))
 
-where the maximum runs over the actions available in ``s'``.
+where the maximum runs over the actions available in ``s'`` and ``dt`` is the game time
+between the two decisions, measured in decision intervals (decision points are not
+evenly spaced, see ``MacroBot``).
 """
 
 from __future__ import annotations
@@ -112,7 +114,7 @@ class StateDiscretizer:
 @dataclass(frozen=True)
 class QLearningConfig:
     alpha: float = 0.1  # learning rate
-    gamma: float = 0.99  # discount factor per decision step
+    gamma: float = 0.99  # discount factor per decision interval (1.43 s of game time)
     epsilon_start: float = 1.0  # exploration rate in the first episode
     epsilon_end: float = 0.05  # exploration rate after the decay
     epsilon_decay_episodes: int = 150  # episodes over which epsilon falls linearly
@@ -178,6 +180,7 @@ class TabularQAgent(Agent):
         next_obs: np.ndarray,
         next_action_mask: np.ndarray,
         terminated: bool,
+        intervals_elapsed: float = 1.0,
     ) -> None:
         cfg = self.config
         state = self.discretizer(obs)
@@ -191,7 +194,8 @@ class TabularQAgent(Agent):
                 next_value = cfg.initial_q
             else:
                 next_value = float(next_row[next_valid].max())
-            target += cfg.gamma * next_value
+            # Steps differ in length, so the discount follows the game time that passed.
+            target += cfg.gamma**intervals_elapsed * next_value
 
         row[action] += cfg.alpha * (target - row[action])
         self.visits[state][action] += 1

@@ -61,7 +61,15 @@ class EnvConfig:
     map_name: str = "Simple64"
     difficulty: str = "VeryEasy"  # built-in opponent, one of DIFFICULTIES
     game_step: int = 8  # game loops simulated per bot step
-    decision_interval: int = 4  # bot steps between agent decisions (4 * 8 loops = 1.43 s)
+    # Bot steps per decision interval (4 * 8 loops = 1.43 s of game time). The agent is
+    # asked for an action at most once per interval, see MacroBot._decision_due.
+    decision_interval: int = 4
+    # NO_OP means "wait": the next decision comes when an action that was unavailable
+    # becomes available, or after this many intervals (7 * 1.43 s = 10 s).
+    wait_intervals: int = 7
+    # A decision point is forced after this many intervals without one (42 = 60 s),
+    # even if NO_OP is the only available action.
+    max_idle_intervals: int = 42
     max_game_minutes: float = 20.0  # longer games are truncated and count as a tie
     realtime: bool = False  # True: play at human speed (to watch with the Windows client)
     start_timeout_s: float = 240.0  # time allowed for SC2 to launch and reach the first decision
@@ -74,14 +82,18 @@ class EnvConfig:
             raise ValueError(f"difficulty must be one of {DIFFICULTIES}, got {self.difficulty!r}")
         if self.game_step < 1 or self.decision_interval < 1:
             raise ValueError("game_step and decision_interval must be positive")
+        if not 1 <= self.wait_intervals <= self.max_idle_intervals:
+            raise ValueError("expected 1 <= wait_intervals <= max_idle_intervals")
 
     @property
-    def loops_per_decision(self) -> int:
+    def loops_per_interval(self) -> int:
+        """Game loops in one decision interval."""
         return self.game_step * self.decision_interval
 
     @property
-    def seconds_per_decision(self) -> float:
-        return self.loops_per_decision / GAME_LOOPS_PER_SECOND
+    def seconds_per_interval(self) -> float:
+        """Game seconds in one decision interval."""
+        return self.loops_per_interval / GAME_LOOPS_PER_SECOND
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -44,24 +44,50 @@ def test_reset_returns_the_opening_position(env):
     assert not mask[MacroAction.BUILD_BARRACKS] and not mask[MacroAction.ATTACK]
 
 
-def test_actions_change_the_game_and_time_advances_by_the_decision_interval(env):
+def test_an_unavailable_action_is_ignored_and_reported(env):
     _, info = env.reset(seed=1)
-    first_loop = info["game_loop"]
+    assert info["intervals_elapsed"] == 0
 
-    _, reward, terminated, truncated, info = env.step(MacroAction.TRAIN_SCV)
+    # Barracks need a Supply Depot and 150 minerals; neither is there at the start.
+    _, reward, terminated, truncated, info = env.step(MacroAction.BUILD_BARRACKS)
+
     assert not terminated and not truncated
-    assert info["game_loop"] - first_loop == env.config.loops_per_decision
-    assert info["last_action_executed"]
-    assert info["raw"]["minerals"] < 50  # the SCV was paid for
+    assert not info["last_action_executed"]
+    assert info["raw"]["minerals"] >= 50  # nothing was spent
+    assert info["intervals_elapsed"] == 1  # the SCV is still on offer: asked again at once
+    assert info["game_loop"] == env.config.loops_per_interval
     assert set(info["reward_components"]) == set(REWARD_COMPONENTS)
 
-    # Barracks are not available yet: the action is ignored and reported as such.
-    _, _, _, _, info = env.step(MacroAction.BUILD_BARRACKS)
-    assert not info["last_action_executed"]
 
-    for _ in range(40):
+def test_the_agent_is_not_asked_while_there_is_nothing_to_decide(env):
+    _, info = env.reset(seed=1)
+
+    # The SCV takes all 50 minerals, so NO_OP is the only option until more are mined.
+    _, _, _, _, info = env.step(MacroAction.TRAIN_SCV)
+
+    assert info["last_action_executed"]
+    assert info["action_mask"].sum() > 1  # the next decision point offers a real choice
+    assert info["intervals_elapsed"] > 1  # the idle intervals were skipped
+    assert info["game_loop"] == info["intervals_elapsed"] * env.config.loops_per_interval
+
+
+def test_no_op_waits_for_a_new_option_or_the_wait_limit(env):
+    limit = env.config.wait_intervals
+    _, info = env.reset(seed=1)
+    _, _, _, _, info = env.step(MacroAction.TRAIN_SCV)
+
+    waits = []
+    while info["raw"]["game_minutes"] < 1.0:
+        declined = info["action_mask"].copy()
         _, _, _, _, info = env.step(MacroAction.NO_OP)
-    assert info["raw"]["workers"] == 13
+        new_option = bool(np.any(info["action_mask"] & ~declined))
+        waits.append((info["intervals_elapsed"], new_option))
+
+    assert all(
+        elapsed == limit or (new_option and elapsed < limit) for elapsed, new_option in waits
+    )
+    assert any(elapsed == limit for elapsed, _ in waits)  # nothing new: the full wait
+    assert info["raw"]["workers"] == 13  # the SCV ordered at the start has finished
 
 
 def test_game_is_truncated_at_the_time_limit_and_the_worker_is_reused(env):

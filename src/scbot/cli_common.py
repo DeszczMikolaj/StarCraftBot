@@ -36,6 +36,13 @@ def add_env_arguments(parser: argparse.ArgumentParser) -> None:
         help="bot steps between agent decisions (default: %(default)s)",
     )
     group.add_argument(
+        "--wait-intervals",
+        type=int,
+        default=defaults.wait_intervals,
+        help="how many decision intervals a NO_OP waits, unless a new option appears "
+        "(default: %(default)s)",
+    )
+    group.add_argument(
         "--max-game-minutes",
         type=float,
         default=defaults.max_game_minutes,
@@ -55,6 +62,7 @@ def env_config_from_args(args: argparse.Namespace) -> EnvConfig:
         difficulty=args.difficulty,
         game_step=args.game_step,
         decision_interval=args.decision_interval,
+        wait_intervals=args.wait_intervals,
         max_game_minutes=args.max_game_minutes,
         realtime=args.realtime,
     )

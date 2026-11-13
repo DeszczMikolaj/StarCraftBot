@@ -66,7 +66,7 @@ def parse_args() -> argparse.Namespace:
     output.add_argument(
         "--log-steps-every",
         type=int,
-        default=20,
+        default=10,
         help="store the raw game readings of every N-th decision in steps.jsonl (0: never)",
     )
     output.add_argument("--no-tensorboard", action="store_true")
@@ -136,7 +136,7 @@ def main() -> None:
     print(
         f"run: {run_dir} | map={env_config.map_name} opponent={env_config.difficulty} | "
         f"state space: {agent.discretizer.n_states} states | "
-        f"decision every {env_config.seconds_per_decision:.2f} s of game time | "
+        f"decision interval {env_config.seconds_per_interval:.2f} s of game time | "
         f"{args.num_envs} game(s) in parallel",
         flush=True,
     )

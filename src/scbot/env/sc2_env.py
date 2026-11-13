@@ -34,7 +34,9 @@ class SC2MacroEnv(gym.Env):
 
     * observation: ``float32`` vector of length ``OBS_DIM`` (see ``observation.FEATURES``);
     * action: index of a ``MacroAction``;
-    * one ``step`` advances the game by ``config.loops_per_decision`` game loops;
+    * one ``step`` advances the game to the next decision point: at least one decision
+      interval (``config.loops_per_interval`` game loops), longer when there was nothing
+      to decide or the agent chose to wait (see ``info["intervals_elapsed"]``);
     * ``info["action_mask"]`` marks the actions that can be carried out right now,
       ``info["raw"]`` holds the unscaled game readings.
 
