@@ -33,6 +33,12 @@ def main() -> None:
     parser.add_argument(
         "--num-envs", type=int, default=1, help="games played at the same time (default: 1)"
     )
+    parser.add_argument(
+        "--explore",
+        action="store_true",
+        help="let the agent explore as it does in training (for a Q-table: its final "
+        "epsilon) instead of acting greedily; the agent still does not learn",
+    )
     parser.add_argument("--replay-dir", help="save every game as a replay in this directory")
     parser.add_argument("--out", help="write the results to this JSON file")
     args = parser.parse_args()
@@ -68,7 +74,7 @@ def main() -> None:
             envs,
             agent,
             args.episodes,
-            explore=False,
+            explore=args.explore,
             learn=False,
             seed=args.seed,
             replay_path=replay_path,
@@ -85,6 +91,7 @@ def main() -> None:
     result = {
         "agent": agent.name,
         "model": args.model,
+        "explore": args.explore,
         "env": config.to_dict(),
         "games": len(games),
         "wins": wins,

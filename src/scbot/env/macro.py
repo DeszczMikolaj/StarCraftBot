@@ -31,6 +31,7 @@ DEPOT_TYPES = {UnitTypeId.SUPPLYDEPOT, UnitTypeId.SUPPLYDEPOTLOWERED}
 NON_ARMY_TYPES = {UnitTypeId.SCV, UnitTypeId.MULE}
 # Structures the macro actions can order; their cost is reserved while the SCV walks.
 BUILDABLE_TYPES = (UnitTypeId.SUPPLYDEPOT, UnitTypeId.BARRACKS, UnitTypeId.COMMANDCENTER)
+SUPPLY_PER_DEPOT = 8
 
 # Distance from the Command Center (towards the map centre) around which buildings are placed.
 DEPOT_ANCHOR_DISTANCE = 5.0
@@ -104,6 +105,11 @@ class MacroExecutor:
         cost = self.bot.calculate_cost(unit_type).minerals
         return max(self.free_minerals(), 0) // cost if cost > 0 else 0
 
+    def spare_supply(self) -> int:
+        """Free supply, counting Supply Depots that are ordered or under construction."""
+        pending_depots = self.pending_structures(UnitTypeId.SUPPLYDEPOT)
+        return int(self.bot.supply_left) + SUPPLY_PER_DEPOT * pending_depots
+
     def threats(self) -> Units:
         """Enemy units close to one of our structures."""
         bot = self.bot
@@ -149,6 +155,7 @@ class MacroExecutor:
         if worker_count and bot.townhalls:
             mask[MacroAction.BUILD_SUPPLY_DEPOT] = (
                 bot.supply_cap < 200
+                and self.spare_supply() < cfg.max_spare_supply
                 and self.can_afford(UnitTypeId.SUPPLYDEPOT)
                 and self.pending_structures(UnitTypeId.SUPPLYDEPOT) < cfg.max_pending_supply_depots
             )

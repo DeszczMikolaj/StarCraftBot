@@ -45,6 +45,10 @@ class MacroConfig:
     max_barracks: int = 6
     max_pending_barracks: int = 2
     max_pending_supply_depots: int = 2
+    # No new Supply Depot while free supply, counting depots already on the way,
+    # reaches this much. Six Barracks and a Command Center use about 7 supply in
+    # the time a depot takes to build, so 16 is two depots of headroom.
+    max_spare_supply: int = 16
     defend_radius: float = 15.0  # enemies this close to one of our structures trigger the defence
     rally_distance: float = 8.0  # how far in front of the forward base the army waits
     # After ATTACK or RETREAT the opposite order is unavailable for this long (game seconds),

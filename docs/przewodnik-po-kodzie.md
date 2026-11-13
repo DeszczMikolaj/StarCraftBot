@@ -64,7 +64,7 @@ Zaczynamy w chwili, gdy agent właśnie dostał obserwację.
 | 2 | [`step_async`](../src/scbot/env/sc2_env.py#L119-L129) | Środowisko sprawdza akcję i wkłada do potoku komunikat `("action", n)`. |
 | 3 | [`PipeBridge.decide`](../src/scbot/env/worker.py#L38-L43) | W procesie gry bot czekał na `recv()`. Dostaje numer akcji. |
 | 4 | [wykonanie akcji](../src/scbot/env/bot.py#L127-L135) | Bot zamienia numer na `MacroAction`, zapamiętuje chwilę decyzji i każe warstwie makro wykonać akcję. |
-| 5 | [`execute`](../src/scbot/env/macro.py#L185-L219) | Warstwa makro wybiera robotnika, miejsce budowy albo zmienia tryb armii. |
+| 5 | [`execute`](../src/scbot/env/macro.py#L192-L226) | Warstwa makro wybiera robotnika, miejsce budowy albo zmienia tryb armii. |
 | 6 | [`on_step`](../src/scbot/env/bot.py#L62-L68) | Po akcji bot robi porządki (`housekeeping`): robotnicy, przerwane budowy, armia. |
 | 7 | biblioteka python-sc2 | Rozkazy idą do gry, gra symuluje 8 pętli i znów woła `on_step`. |
 | 8 | [`on_step`](../src/scbot/env/bot.py#L62-L68) | Co czwarty krok bot liczy maskę akcji i pyta regułę z przystanku 7, czy to punkt decyzyjny. |
@@ -105,10 +105,10 @@ wykonuje, ale każda liczba, którą będziesz chciał zmienić, jest tutaj.
 | Linie | Co zawiera |
 |-------|------------|
 | [`RewardConfig`](../src/scbot/config.py#L21-L35) | Wagi nagrody: wygrana, przegrana, remis i cztery składniki pomocnicze. |
-| [`MacroConfig`](../src/scbot/config.py#L38-L54) | Limity i odległości warstwy skryptowej: ile SCV, baz, koszar, promień obrony, minimalny czas rozkazu dla armii. |
-| [`EnvConfig`](../src/scbot/config.py#L57-L78) | Mapa, przeciwnik, czas (krok bota, interwał, czekanie, limit gry), limity czasu oczekiwania na grę. Zawiera w sobie dwie poprzednie klasy. |
-| [`__post_init__`](../src/scbot/config.py#L80-L86) | Odrzuca bezsensowne ustawienia już przy tworzeniu obiektu. |
-| [`loops_per_interval`](../src/scbot/config.py#L88-L96) | Przelicza interwał na pętle gry i sekundy (32 pętle, 1,43 s). |
+| [`MacroConfig`](../src/scbot/config.py#L38-L58) | Limity i odległości warstwy skryptowej: ile SCV, baz, koszar, zapasu populacji, promień obrony, minimalny czas rozkazu dla armii. |
+| [`EnvConfig`](../src/scbot/config.py#L61-L82) | Mapa, przeciwnik, czas (krok bota, interwał, czekanie, limit gry), limity czasu oczekiwania na grę. Zawiera w sobie dwie poprzednie klasy. |
+| [`__post_init__`](../src/scbot/config.py#L84-L90) | Odrzuca bezsensowne ustawienia już przy tworzeniu obiektu. |
+| [`loops_per_interval`](../src/scbot/config.py#L92-L100) | Przelicza interwał na pętle gry i sekundy (32 pętle, 1,43 s). |
 
 Klasy są zamrożone (`frozen=True`), bo obiekt konfiguracji jest wysyłany do procesu gry.
 Zmieniony wariant tworzy się przez `dataclasses.replace(EnvConfig(), difficulty="Easy")`.
@@ -298,66 +298,67 @@ Pliki: [`actions.py`](../src/scbot/env/actions.py), [`macro.py`](../src/scbot/en
 jest jednocześnie numerem kolumny w tablicy Q, dlatego nowe akcje dopisuje się tylko na
 końcu.
 
-Klasa [`MacroExecutor`](../src/scbot/env/macro.py#L51) ma trzy zadania: powiedzieć, co da się teraz zrobić,
+Klasa [`MacroExecutor`](../src/scbot/env/macro.py#L52) ma trzy zadania: powiedzieć, co da się teraz zrobić,
 wykonać wybraną akcję i utrzymywać bazę oraz armię między decyzjami.
 
 **Stan i pytania pomocnicze.**
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [stałe](../src/scbot/env/macro.py#L30-L43) | Typy budynków, odległości i krok siatki przy szukaniu miejsca budowy. | Liczby związane z rozmieszczaniem budynków są w jednym miejscu. |
-| [`ArmyMode`](../src/scbot/env/macro.py#L46-L48) | Dwa tryby armii: obrona i atak. | `ATTACK` i `RETREAT` tylko przełączają tryb; rozkazy wydaje `_control_army`. |
-| [`pending_structures`](../src/scbot/env/macro.py#L76-L79) | Budynki w budowie plus SCV idące, żeby budowę zacząć. | „W drodze" też się liczy, inaczej agent zleciłby ten sam budynek kilka razy. |
-| [`reserved_minerals`](../src/scbot/env/macro.py#L81-L92) | Suma kosztów budynków, do których SCV dopiero idzie. | Gra pobiera koszt przy rozpoczęciu budowy, a nie przy rozkazie. |
-| [`can_afford`](../src/scbot/env/macro.py#L97-L100) i [`affordable_count`](../src/scbot/env/macro.py#L102-L105) | Czy stać nas na coś z minerałów wolnych, czyli po odjęciu rezerwy, i na ile sztuk. | Zlecony budynek ma powstać, nawet jeśli agent chciałby wydać te pieniądze. |
-| [`threats`](../src/scbot/env/macro.py#L107-L114) | Jednostki wroga bliżej niż `defend_radius` od któregokolwiek naszego budynku. | To one uruchamiają obronę i cechę `enemy_near_base`. |
-| [`army_mode_locked`](../src/scbot/env/macro.py#L116-L121) | Czy od ostatniej zmiany trybu armii minęło mniej niż 30 s gry. | Rozkaz ma trwać na tyle długo, żeby armia zdążyła dojść. |
-| [`rally_point`](../src/scbot/env/macro.py#L123-L131) | Punkt zbiórki: przed bazą najbliższą wrogowi, w stronę środka mapy. | Tu armia czeka w trybie obrony. |
+| [stałe](../src/scbot/env/macro.py#L30-L44) | Typy budynków, odległości i krok siatki przy szukaniu miejsca budowy. | Liczby związane z rozmieszczaniem budynków są w jednym miejscu. |
+| [`ArmyMode`](../src/scbot/env/macro.py#L47-L49) | Dwa tryby armii: obrona i atak. | `ATTACK` i `RETREAT` tylko przełączają tryb; rozkazy wydaje `_control_army`. |
+| [`pending_structures`](../src/scbot/env/macro.py#L77-L80) | Budynki w budowie plus SCV idące, żeby budowę zacząć. | „W drodze" też się liczy, inaczej agent zleciłby ten sam budynek kilka razy. |
+| [`reserved_minerals`](../src/scbot/env/macro.py#L82-L93) | Suma kosztów budynków, do których SCV dopiero idzie. | Gra pobiera koszt przy rozpoczęciu budowy, a nie przy rozkazie. |
+| [`can_afford`](../src/scbot/env/macro.py#L98-L101) i [`affordable_count`](../src/scbot/env/macro.py#L103-L106) | Czy stać nas na coś z minerałów wolnych, czyli po odjęciu rezerwy, i na ile sztuk. | Zlecony budynek ma powstać, nawet jeśli agent chciałby wydać te pieniądze. |
+| [`spare_supply`](../src/scbot/env/macro.py#L108-L111) | Wolna populacja powiększona o magazyny zlecone i w budowie (po 8 na magazyn). | Magazyn na zapas ponad potrzeby to czysta strata, więc maska go nie oferuje. |
+| [`threats`](../src/scbot/env/macro.py#L113-L120) | Jednostki wroga bliżej niż `defend_radius` od któregokolwiek naszego budynku. | To one uruchamiają obronę i cechę `enemy_near_base`. |
+| [`army_mode_locked`](../src/scbot/env/macro.py#L122-L127) | Czy od ostatniej zmiany trybu armii minęło mniej niż 30 s gry. | Rozkaz ma trwać na tyle długo, żeby armia zdążyła dojść. |
+| [`rally_point`](../src/scbot/env/macro.py#L129-L137) | Punkt zbiórki: przed bazą najbliższą wrogowi, w stronę środka mapy. | Tu armia czeka w trybie obrony. |
 
-**Maska akcji.** [`available_actions`](../src/scbot/env/macro.py#L133-L181) buduje tablicę ośmiu wartości
+**Maska akcji.** [`available_actions`](../src/scbot/env/macro.py#L139-L188) buduje tablicę ośmiu wartości
 logicznych. Czyta się ją akcja po akcji:
 
 | Linie | Akcja | Warunek |
 |-------|-------|---------|
-| [137](../src/scbot/env/macro.py#L137) | `NO_OP` | Zawsze dostępna. |
-| [142–147](../src/scbot/env/macro.py#L142-L147) | `TRAIN_SCV` | Bezczynne Command Center, stać nas, a SCV żywych i w produkcji jest mniej niż limit. |
-| [149–154](../src/scbot/env/macro.py#L149-L154) | `BUILD_SUPPLY_DEPOT` | Limit populacji poniżej 200, stać nas, mniej niż dwa magazyny w budowie. |
-| [156–163](../src/scbot/env/macro.py#L156-L163) | `BUILD_BARRACKS` | Poniżej limitu koszar, mniej niż dwie w budowie, jest gotowy magazyn, stać nas. |
-| [165–170](../src/scbot/env/macro.py#L165-L170) | `EXPAND` | Znane jest miejsce, w którym da się postawić bazę, baz jest mniej niż limit, żadna nie jest w budowie, stać nas. |
-| [172–174](../src/scbot/env/macro.py#L172-L174) | `TRAIN_MARINE` | Są bezczynne koszary i stać nas. |
-| [176–180](../src/scbot/env/macro.py#L176-L180) | `ATTACK` / `RETREAT` | Tryb armii nie jest zablokowany. `ATTACK` w obronie, gdy armia istnieje; `RETREAT` w ataku. |
+| [143](../src/scbot/env/macro.py#L143) | `NO_OP` | Zawsze dostępna. |
+| [148–153](../src/scbot/env/macro.py#L148-L153) | `TRAIN_SCV` | Bezczynne Command Center, stać nas, a SCV żywych i w produkcji jest mniej niż limit. |
+| [155–161](../src/scbot/env/macro.py#L155-L161) | `BUILD_SUPPLY_DEPOT` | Limit populacji poniżej 200, zapas populacji (z magazynami w drodze) poniżej 16, stać nas, mniej niż dwa magazyny w budowie. |
+| [163–170](../src/scbot/env/macro.py#L163-L170) | `BUILD_BARRACKS` | Poniżej limitu koszar, mniej niż dwie w budowie, jest gotowy magazyn, stać nas. |
+| [172–177](../src/scbot/env/macro.py#L172-L177) | `EXPAND` | Znane jest miejsce, w którym da się postawić bazę, baz jest mniej niż limit, żadna nie jest w budowie, stać nas. |
+| [179–181](../src/scbot/env/macro.py#L179-L181) | `TRAIN_MARINE` | Są bezczynne koszary i stać nas. |
+| [183–187](../src/scbot/env/macro.py#L183-L187) | `ATTACK` / `RETREAT` | Tryb armii nie jest zablokowany. `ATTACK` w obronie, gdy armia istnieje; `RETREAT` w ataku. |
 
 Maska musi być uczciwa: akcja oznaczona jako dostępna ma się dać wykonać. Akcja, która
 jest oferowana, a potem odrzucana, nic nie kosztuje i uczący się agent zaczyna jej
 nadużywać ([wyniki.md](wyniki.md)).
 
-**Wykonanie akcji.** [`execute`](../src/scbot/env/macro.py#L185-L219):
+**Wykonanie akcji.** [`execute`](../src/scbot/env/macro.py#L192-L226):
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [187–188](../src/scbot/env/macro.py#L187-L188) | Akcja spoza maski nie jest wykonywana; funkcja zwraca `False`. | Agent, który ignoruje maskę, nie psuje gry, a środowisko to raportuje. |
-| [191–198](../src/scbot/env/macro.py#L191-L198) | Szkolenie: w każdym bezczynnym budynku jedna jednostka, ale nie więcej, niż pozwalają wolne minerały. | Jedna decyzja uruchamia całą dostępną produkcję. |
-| [199–210](../src/scbot/env/macro.py#L199-L210) | Budowa magazynu lub koszar: `bot.build` z python-sc2 szuka wolnego miejsca wokół punktu z [`_build_anchor`](../src/scbot/env/macro.py#L221-L229) i wybiera robotnika. | Agent nie decyduje, gdzie i kim budować. |
-| [`_expand`](../src/scbot/env/macro.py#L231-L239) | Stawia Command Center dokładnie w zapamiętanym miejscu. Po niepowodzeniu przestaje je oferować do następnego sprawdzenia. | Odrzucona ekspansja nie może być oferowana w kółko. |
-| [213–218](../src/scbot/env/macro.py#L213-L218) | `ATTACK` i `RETREAT` wołają [`_set_army_mode`](../src/scbot/env/macro.py#L270-L274): zmiana trybu i zapamiętanie chwili zmiany. | Od tej chwili liczy się 30 s blokady. |
+| [194–195](../src/scbot/env/macro.py#L194-L195) | Akcja spoza maski nie jest wykonywana; funkcja zwraca `False`. | Agent, który ignoruje maskę, nie psuje gry, a środowisko to raportuje. |
+| [198–205](../src/scbot/env/macro.py#L198-L205) | Szkolenie: w każdym bezczynnym budynku jedna jednostka, ale nie więcej, niż pozwalają wolne minerały. | Jedna decyzja uruchamia całą dostępną produkcję. |
+| [206–217](../src/scbot/env/macro.py#L206-L217) | Budowa magazynu lub koszar: `bot.build` z python-sc2 szuka wolnego miejsca wokół punktu z [`_build_anchor`](../src/scbot/env/macro.py#L228-L236) i wybiera robotnika. | Agent nie decyduje, gdzie i kim budować. |
+| [`_expand`](../src/scbot/env/macro.py#L238-L246) | Stawia Command Center dokładnie w zapamiętanym miejscu. Po niepowodzeniu przestaje je oferować do następnego sprawdzenia. | Odrzucona ekspansja nie może być oferowana w kółko. |
+| [220–225](../src/scbot/env/macro.py#L220-L225) | `ATTACK` i `RETREAT` wołają [`_set_army_mode`](../src/scbot/env/macro.py#L277-L281): zmiana trybu i zapamiętanie chwili zmiany. | Od tej chwili liczy się 30 s blokady. |
 
-[`refresh_expansion_site`](../src/scbot/env/macro.py#L241-L268) wybiera miejsce pod następną bazę: lokalizacja
+[`refresh_expansion_site`](../src/scbot/env/macro.py#L248-L275) wybiera miejsce pod następną bazę: lokalizacja
 bliższa naszemu startowi niż startowi wroga, niezajęta przez nas, na której da się teraz
 postawić Command Center i do której da się dojść. Jest wołana co kilka sekund w ramach
 porządków.
 
-**Porządki między decyzjami.** [`housekeeping`](../src/scbot/env/macro.py#L278-L285) działa w każdym kroku
+**Porządki między decyzjami.** [`housekeeping`](../src/scbot/env/macro.py#L285-L292) działa w każdym kroku
 bota, niezależnie od tego, czy agent był pytany:
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [280–284](../src/scbot/env/macro.py#L280-L284) | Co 8 kroków bota: rozsyła bezczynnych robotników, odświeża miejsce pod bazę, dosyła SCV do przerwanych budów, opuszcza magazyny. | To czynności, których agent nie powinien musieć się uczyć. |
-| [`_control_army`](../src/scbot/env/macro.py#L300-L305) | Co krok: ustala, czy trzeba odświeżyć rozkazy (zmiana trybu albo minęło 12 kroków). | Rozkazy nie są wysyłane w każdym kroku, żeby nie zalewać gry. |
-| [atak](../src/scbot/env/macro.py#L307-L312) | W trybie ataku jednostki bezczynne (i wszystkie przy odświeżeniu) idą z atakiem na cel. | Nowo wyszkolone jednostki same dołączają. |
-| [odwrót](../src/scbot/env/macro.py#L314-L318) | Tuż po `RETREAT` cała armia dostaje zwykły ruch do punktu zbiórki. | Ruch bez ataku, żeby jednostki nie zatrzymywały się po drodze. |
-| [obrona](../src/scbot/env/macro.py#L320-L325) | W obronie, gdy są zagrożenia, armia atakuje najbliższe. | Obrona bazy nie wymaga decyzji agenta. |
-| [zbiórka](../src/scbot/env/macro.py#L327-L329) | Bez zagrożeń bezczynne jednostki wracają do punktu zbiórki. | Armia nie rozchodzi się po mapie. |
-| [`_attack_target`](../src/scbot/env/macro.py#L331-L356) | Cel ataku: najbliższy znany budynek wroga, potem start wroga, a gdy jest pusty, kolejne lokalizacje baz. | Gra kończy się po zniszczeniu wszystkich budynków, więc trzeba je znaleźć. |
+| [287–291](../src/scbot/env/macro.py#L287-L291) | Co 8 kroków bota: rozsyła bezczynnych robotników, odświeża miejsce pod bazę, dosyła SCV do przerwanych budów, opuszcza magazyny. | To czynności, których agent nie powinien musieć się uczyć. |
+| [`_control_army`](../src/scbot/env/macro.py#L307-L312) | Co krok: ustala, czy trzeba odświeżyć rozkazy (zmiana trybu albo minęło 12 kroków). | Rozkazy nie są wysyłane w każdym kroku, żeby nie zalewać gry. |
+| [atak](../src/scbot/env/macro.py#L314-L319) | W trybie ataku jednostki bezczynne (i wszystkie przy odświeżeniu) idą z atakiem na cel. | Nowo wyszkolone jednostki same dołączają. |
+| [odwrót](../src/scbot/env/macro.py#L321-L325) | Tuż po `RETREAT` cała armia dostaje zwykły ruch do punktu zbiórki. | Ruch bez ataku, żeby jednostki nie zatrzymywały się po drodze. |
+| [obrona](../src/scbot/env/macro.py#L327-L332) | W obronie, gdy są zagrożenia, armia atakuje najbliższe. | Obrona bazy nie wymaga decyzji agenta. |
+| [zbiórka](../src/scbot/env/macro.py#L334-L336) | Bez zagrożeń bezczynne jednostki wracają do punktu zbiórki. | Armia nie rozchodzi się po mapie. |
+| [`_attack_target`](../src/scbot/env/macro.py#L338-L363) | Cel ataku: najbliższy znany budynek wroga, potem start wroga, a gdy jest pusty, kolejne lokalizacje baz. | Gra kończy się po zniszczeniu wszystkich budynków, więc trzeba je znaleźć. |
 
 Warunki dostępności i opis zachowania prozą: [srodowisko.md](srodowisko.md#akcje).
 
