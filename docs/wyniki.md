@@ -127,22 +127,43 @@ coraz częściej wybierał `EXPAND` i `BUILD_BARRACKS`: odpowiednio 35 i 21 razy
 przy limicie trzech baz i sześciu koszar. Liczba wyszkolonych Marines spadała, a z nią
 odsetek wygranych.
 
-Powodem były **rozkazy budowy, które przepadały**. Gra pobiera koszt budynku dopiero przy
-rozpoczęciu budowy. Jeśli agent wydał minerały, zanim SCV doszedł na miejsce, budowa nie
-ruszała, a akcja znów stawała się dostępna. Taki rozkaz nic nie kosztował, więc jego
-wartość w tablicy nie spadała, a każde jego wybranie zajmowało decyzję, która mogła
-pójść na produkcję.
+**Pierwsza diagnoza była błędna.** Założyliśmy, że rozkazy przepadają, bo agent wydaje
+minerały przed dojściem SCV, i dodaliśmy rezerwację minerałów. Pomiar po tej zmianie
+pokazał, że `EXPAND` nadal pada średnio 34 razy na grę agenta losowego.
+
+**Właściwa przyczyna:** maska oferuje `EXPAND`, którego nie da się wykonać. Trzecią
+„wolną" lokalizacją na `Simple64` jest ekspansja przeciwnika i budowa jest tam
+odrzucana. Odrzucona akcja kosztuje jeden interwał (1,43 s), podczas gdy `NO_OP` kosztuje
+do siedmiu, więc w tablicy wygląda prawie tak dobrze jak najlepsza akcja. Agent zachłanny
+wybiera ją coraz częściej i traci decyzje, które mogły pójść na produkcję. Wzrost liczby
+`BUILD_BARRACKS` to głównie odbudowa koszar w przegrywanych grach, czyli skutek, a nie
+przyczyna.
 
 ### Wniosek dla środowiska
 
-Warstwa skryptowa rezerwuje teraz minerały na zlecone budynki
-([srodowisko.md](srodowisko.md#rezerwacja-minerałów)). Ta sama wada działała też w v1,
-więc v1 i v2 nie pokazują, jak Q-Learning radzi sobie na poprawnym środowisku. Pokazują
-natomiast, jak czuły jest na jego niedoskonałości.
+Do naprawy pozostaje maska `EXPAND`
+([srodowisko.md](srodowisko.md#znana-wada-expand-oferowane-gdy-nie-da-się-go-wykonać)).
+Ta wada działała we wszystkich trzech treningach, więc żaden z nich nie pokazuje, jak
+Q-Learning radzi sobie na poprawnym środowisku.
+
+## Agenci odniesienia po dodaniu rezerwacji minerałów
+
+| Agent | Przeciwnik | W / P / R | Wygrane (95% CI) |
+|-------|------------|-----------|------------------|
+| skryptowy | VeryEasy | 24 / 0 / 0 | 100% (86–100%) |
+| skryptowy | Easy | 24 / 0 / 0 | 100% (86–100%) |
+| skryptowy | Medium | 17 / 7 / 0 | 71% (51–85%) |
+| losowy | VeryEasy | 24 / 0 / 0 | 100% (86–100%) |
+| losowy | Easy | 16 / 30 / 2 | 33% (22–48%) |
+| losowy | Medium | 0 / 24 / 0 | 0% (0–14%) |
 
 ## Model A, trening v3: rezerwacja minerałów i optymistyczne wartości początkowe
 
-W toku. Wyniki zostaną dopisane po zakończeniu treningu.
+Trening (500 gier, `--initial-q 0.5`) był w toku w chwili zapisu tego dokumentu i nie
+został jeszcze oceniony. Po 264 grach odsetek wygranych w blokach po 50 gier wynosił
+44%, 52%, 60%, 42% i 44%, bez wyraźnego trendu, a liczba odrzuconych akcji rosła
+z 25 do 46 na grę. Dane są w `runs/q_easy_v3/`; streszczenie pokaże
+`uv run python -m scbot.report runs/q_easy_v3`.
 
 ## Wydajność
 

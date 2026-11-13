@@ -156,11 +156,19 @@ liczą się od minerałów wolnych, czyli stanu konta pomniejszonego o rezerwę
 (`MacroExecutor.reserved_minerals`). Cecha `minerals` w obserwacji pokazuje pełny stan
 konta, tak jak gra.
 
-Bez rezerwacji agent mógł wydać pieniądze, zanim SCV doszedł na miejsce. Rozkaz wtedy
-przepadał bez śladu i akcja znów była dostępna. W grach agenta losowego `EXPAND` padało
-od kilkunastu do ponad 60 razy na grę przy limicie trzech baz, a `BUILD_BARRACKS` do 41
-razy przy limicie sześciu koszar. Uczący się agent wybierał te akcje coraz częściej, bo
-nic go nie kosztowały ([wyniki.md](wyniki.md)).
+Bez rezerwacji agent mógł wydać pieniądze, zanim SCV doszedł na miejsce, i rozkaz
+przepadał. Wpływu samej rezerwacji na wyniki nie zmierzyliśmy osobno.
+
+### Znana wada: `EXPAND` oferowane, gdy nie da się go wykonać
+
+Na `Simple64` są cztery miejsca na bazę: dwa startowe i po jednej ekspansji naturalnej.
+Po zajęciu własnej ekspansji „najbliższą wolną" jest ekspansja przeciwnika, gdzie budowa
+jest zwykle odrzucana. Maska mimo to oferuje `EXPAND` (limit baz to 3), a odrzucona
+akcja kosztuje tylko jeden interwał, więc działa jak tanie „poczekaj". W 48 grach agenta
+losowego z Easy `EXPAND` padało średnio 34 razy na grę i prawie zawsze było odrzucane
+(`invalid_actions` średnio 32 na grę). Do naprawy: maska powinna oferować `EXPAND` tylko
+dla lokalizacji po naszej stronie mapy, na której da się postawić budynek
+([wyniki.md](wyniki.md)).
 
 ### Co skrypt robi sam, bez decyzji agenta
 
