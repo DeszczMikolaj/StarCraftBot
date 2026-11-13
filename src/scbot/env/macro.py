@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
 DEPOT_TYPES = {UnitTypeId.SUPPLYDEPOT, UnitTypeId.SUPPLYDEPOTLOWERED}
 NON_ARMY_TYPES = {UnitTypeId.SCV, UnitTypeId.MULE}
+# Structures the macro actions can order; their cost is reserved while the SCV walks.
+BUILDABLE_TYPES = (UnitTypeId.SUPPLYDEPOT, UnitTypeId.BARRACKS, UnitTypeId.COMMANDCENTER)
 
 # Distance from the Command Center (towards the map centre) around which buildings are placed.
 DEPOT_ANCHOR_DISTANCE = 5.0
@@ -73,6 +75,32 @@ class MacroExecutor:
         under_construction = self.bot.structures(unit_type).not_ready.amount
         return under_construction + int(self.bot.worker_en_route_to_build(unit_type))
 
+    def reserved_minerals(self) -> int:
+        """Minerals promised to buildings whose SCV is still walking to the site.
+
+        The game only charges for a building when construction starts. Without this
+        reserve the agent could spend the money in the meantime and the order would
+        silently fail on arrival.
+        """
+        bot = self.bot
+        return sum(
+            bot.calculate_cost(unit_type).minerals * int(bot.worker_en_route_to_build(unit_type))
+            for unit_type in BUILDABLE_TYPES
+        )
+
+    def free_minerals(self) -> int:
+        return int(self.bot.minerals) - self.reserved_minerals()
+
+    def can_afford(self, unit_type: UnitTypeId) -> bool:
+        """``bot.can_afford`` (minerals, gas, supply) that leaves the reserve untouched."""
+        cost = self.bot.calculate_cost(unit_type).minerals
+        return cost <= self.free_minerals() and self.bot.can_afford(unit_type)
+
+    def affordable_count(self, unit_type: UnitTypeId) -> int:
+        """How many of this unit the free minerals pay for."""
+        cost = self.bot.calculate_cost(unit_type).minerals
+        return max(self.free_minerals(), 0) // cost if cost > 0 else 0
+
     def threats(self) -> Units:
         """Enemy units close to one of our structures."""
         bot = self.bot
@@ -108,7 +136,7 @@ class MacroExecutor:
         ready_townhalls = bot.townhalls.ready
         worker_count = bot.workers.amount
 
-        if ready_townhalls.idle and bot.can_afford(UnitTypeId.SCV):
+        if ready_townhalls.idle and self.can_afford(UnitTypeId.SCV):
             worker_limit = min(
                 cfg.max_workers, cfg.max_workers_per_townhall * ready_townhalls.amount
             )
@@ -118,7 +146,7 @@ class MacroExecutor:
         if worker_count and bot.townhalls:
             mask[MacroAction.BUILD_SUPPLY_DEPOT] = (
                 bot.supply_cap < 200
-                and bot.can_afford(UnitTypeId.SUPPLYDEPOT)
+                and self.can_afford(UnitTypeId.SUPPLYDEPOT)
                 and self.pending_structures(UnitTypeId.SUPPLYDEPOT) < cfg.max_pending_supply_depots
             )
 
@@ -128,18 +156,18 @@ class MacroExecutor:
                 barracks_total < cfg.max_barracks
                 and barracks_pending < cfg.max_pending_barracks
                 and bool(self.supply_depots.ready)  # tech requirement
-                and bot.can_afford(UnitTypeId.BARRACKS)
+                and self.can_afford(UnitTypeId.BARRACKS)
             )
 
             mask[MacroAction.EXPAND] = (
                 bot.townhalls.amount < cfg.max_townhalls
                 and self.pending_structures(UnitTypeId.COMMANDCENTER) == 0
-                and bot.can_afford(UnitTypeId.COMMANDCENTER)
+                and self.can_afford(UnitTypeId.COMMANDCENTER)
             )
 
         mask[MacroAction.TRAIN_MARINE] = bool(
             bot.structures(UnitTypeId.BARRACKS).ready.idle
-        ) and bot.can_afford(UnitTypeId.MARINE)
+        ) and self.can_afford(UnitTypeId.MARINE)
 
         if not self.army_mode_locked():
             if self.army_mode is ArmyMode.DEFEND:
@@ -158,10 +186,12 @@ class MacroExecutor:
             return True
         if action is MacroAction.TRAIN_SCV:
             idle_townhalls = self.bot.townhalls.ready.idle.amount
-            return self.bot.train(UnitTypeId.SCV, amount=idle_townhalls) > 0
+            amount = min(idle_townhalls, self.affordable_count(UnitTypeId.SCV))
+            return self.bot.train(UnitTypeId.SCV, amount=amount) > 0
         if action is MacroAction.TRAIN_MARINE:
             idle_barracks = self.bot.structures(UnitTypeId.BARRACKS).ready.idle.amount
-            return self.bot.train(UnitTypeId.MARINE, amount=idle_barracks) > 0
+            amount = min(idle_barracks, self.affordable_count(UnitTypeId.MARINE))
+            return self.bot.train(UnitTypeId.MARINE, amount=amount) > 0
         if action is MacroAction.BUILD_SUPPLY_DEPOT:
             return await self.bot.build(
                 UnitTypeId.SUPPLYDEPOT,
