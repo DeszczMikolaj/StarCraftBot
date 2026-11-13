@@ -58,12 +58,20 @@ przez 350 gier, wartości początkowe 0.
 Koszt: 48 minut czasu rzeczywistego, 8095 minut czasu gry (około 135 godzin),
 336 020 decyzji i tyle samo aktualizacji tablicy, 932 odwiedzone stany z 7200.
 
+**Zastrzeżenie do danych.** Gra numer 364 padła przy starcie (błąd połączenia z grą)
+i została automatycznie powtórzona. Nowy proces gry wczytał jednak kod środowiska, który
+był w tym czasie edytowany, więc 13 gier między numerami 364 a 499 rozegrało się już na
+nowych zasadach punktów decyzyjnych. Widać je w `episodes.csv` po kilkakrotnie mniejszej
+liczbie decyzji na minutę gry. Tabela powyżej obejmuje wszystkie gry. Bez tych 13 gier
+ostatnie 150 gier daje 51 wygranych, 83 przegrane i 3 remisy na 137 (37%), a z nimi
+54 / 93 / 3 na 150 (36%). Wniosek jest w obu wariantach ten sam.
+
 ### Co się stało
 
 Agent poprawiał się, dopóki część akcji była losowa: przy ε między 0,3 a 0,45 wygrywał
 60% gier, dwa razy częściej niż na początku. Gdy eksploracja zeszła do 5%, wynik spadł
-do 36% w ostatnich 150 grach (54 wygrane, 93 przegrane, 3 remisy), czyli do poziomu
-agenta losowego. Jednocześnie liczba wyszkolonych Marines na grę spadła ze 132 do 73.
+do 37% w ostatnich 150 grach, czyli do poziomu agenta losowego. Jednocześnie liczba
+wyszkolonych Marines na grę spadła ze 132 do około 75.
 Agent nie nauczył się złej strategii ataku. Nauczył się **czekać zamiast produkować**.
 
 Przyczyna jest w konstrukcji zadania, nie w błędzie kodu. `NO_OP` na jeden interwał

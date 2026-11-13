@@ -63,13 +63,14 @@ Oczekiwany wynik:
 [  ok] torch              2.14.1+cpu, CPU only
 [  ok] StarCraft II       /root/StarCraftII (SC2PATH), builds: Base75689
 [  ok] map                /root/StarCraftII/maps/Melee/Simple64.SC2Map
-[  ok] game launch        observation of length 24, game loop 640, minerals=..., workers=...
+[  ok] game launch        observation of length 24, game loop 2848, minerals=50, workers=17
 
 Environment is ready.
 ```
 
 Ostatni wiersz `game launch` oznacza, że gra wystartowała, bot wykonał 20 decyzji
-i odczytał stan gry. Całość trwa kilkanaście sekund.
+i odczytał stan gry. Liczby w tym wierszu będą się nieco różnić między uruchomieniami.
+Całość trwa kilkanaście sekund.
 
 ## Kiedy przebudować obraz
 

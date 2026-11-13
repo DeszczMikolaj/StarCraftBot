@@ -41,6 +41,10 @@ only after changing `pyproject.toml`, `uv.lock` or `docker/`.
   after changing dependencies.
 - Training and evaluation outputs go to `runs/` and `replays/` (git-ignored). A long
   training run should be started in the background and takes tens of minutes.
+- Do not edit anything under `src/scbot/` while a training or evaluation run is in
+  progress. A game worker that restarts after a crashed game imports the files as they
+  are on disk at that moment, so part of the run would use different code. Wait for the
+  run to finish or work in a separate `git worktree`.
 - Keep the runbooks truthful: when a documented command or its output changes, re-run it
   and update the runbook. `runbooks/02-klient-windows.md` is explicitly unverified.
 

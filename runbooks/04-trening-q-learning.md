@@ -118,6 +118,15 @@ Przy grach równoległych epizody są numerowane w kolejności startu i w tej ko
 zapisywane, więc numer w `episodes.csv`, `steps.jsonl`, nazwie powtórki i checkpointu
 oznacza tę samą grę.
 
+## Nie edytuj kodu środowiska w trakcie treningu
+
+Kod jest podmontowany do kontenera z dysku. Działający trening ma go już w pamięci, ale
+proces gry uruchomiony ponownie po awarii pojedynczej gry wczyta pliki w **bieżącej**
+wersji. Zmiana w `src/scbot/env/` w trakcie treningu może więc sprawić, że część gier
+rozegra się na innych zasadach niż reszta (zdarzyło się to w treningu v1, patrz
+[docs/wyniki.md](../docs/wyniki.md)). Jeśli chcesz pracować nad kodem podczas długiego
+treningu, rób to w osobnej kopii repozytorium (`git worktree`).
+
 ## Weryfikacja
 
 - Trening kończy się wierszem `done: N episodes finished, ...`.
