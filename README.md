@@ -39,7 +39,7 @@ Szczegóły: [runbook 01](runbooks/01-srodowisko-docker.md) i [runbook 03](runbo
 Trening i ocena Modelu A:
 
 ```bash
-docker compose run --rm sc2 python -m scbot.train_q --run-name q_baseline --difficulty Easy --episodes 500 --num-envs 12
+docker compose run --rm sc2 python -m scbot.train_q --run-name q_baseline --difficulty Easy --episodes 500 --epsilon-decay-episodes 350 --initial-q 0.5 --num-envs 12
 ```
 
 ```bash

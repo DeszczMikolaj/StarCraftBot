@@ -81,6 +81,14 @@ dyskretyzacji domyślnej.
 | Liczba gier, przez które ε maleje | 150 | `--epsilon-decay-episodes` |
 | Wartość początkowa Q | 0 | `--initial-q` |
 
+**Wartość początkowa.** Domyślnie 0. Treningi od v3 używały 0,5 (`--initial-q 0.5`).
+Przy wartości powyżej typowych wartości Q akcje jeszcze niewypróbowane wyglądają lepiej
+niż wypróbowane, więc agent sprawdza je, zanim zacznie polegać na tablicy. Drugi skutek
+wynika z dyskonta zależnego od czasu: dopóki wszystkie wartości są równe, cel dla
+czekania (dyskonto za 7 interwałów) jest od razu niższy niż dla działania (dyskonto za
+jeden). Nie mamy porównania 0 i 0,5 na tym samym środowisku, więc traktuj 0,5 jako
+ustawienie robocze, a nie zmierzone optimum.
+
 Przy γ = 0,99 na interwał nagroda oddalona o 100 interwałów (143 s gry) liczy się
 z wagą 0,37. Agent patrzy więc około dwóch i pół minuty do przodu. Nagroda końcowa za
 wygraną wpływa wprost tylko na decyzje z ostatnich minut gry, a wcześniejszymi kierują
@@ -136,6 +144,14 @@ gra z tym samym ε.
 - **Mała przewaga działania nad czekaniem.** Wartości „zrób teraz" i „poczekaj" są
   z natury bliskie. Dlatego `NO_OP` jest w środowisku rozciągnięte w czasie
   ([srodowisko.md](srodowisko.md#punkty-decyzyjne)); pomiary są w [wyniki.md](wyniki.md).
+- **Niestabilna polityka zachłanna.** Wartości akcji w jednym stanie różnią się o kilka
+  procent, a szum estymacji jest podobnej wielkości. To, którą akcję tablica wskazuje
+  jako najlepszą, zależy więc od chwili zapisu. Ocena zachłanna kolejnych tablic dała
+  53%, 60% i 23% wygranych, choć w trakcie treningu wyniki były zbliżone. Tablicę
+  oceniaj też z `--explore` i na kilku checkpointach.
+- **Wrażliwość na „darmowe" akcje.** Akcja, która nic nie kosztuje (odrzucana przez
+  środowisko albo po prostu zbędna), nie dostaje niższej wartości i bywa nadużywana.
+  Takie akcje trzeba usuwać w masce, bo tablica sama ich nie odróżni.
 - **Brak uogólniania.** Każdy stan uczy się osobno. To główny powód, dla którego Model B
   zastępuje tablicę siecią.
 

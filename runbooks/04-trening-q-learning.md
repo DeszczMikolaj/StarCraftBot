@@ -14,16 +14,21 @@ Opis algorytmu, dyskretyzacji stanu i formatu tablicy jest w
 ### 1. Uruchom trening
 
 ```bash
-docker compose run --rm sc2 python -m scbot.train_q --run-name q_baseline --difficulty Easy --episodes 500 --epsilon-decay-episodes 350 --num-envs 12
+docker compose run --rm sc2 python -m scbot.train_q --run-name q_baseline --difficulty Easy --episodes 500 --epsilon-decay-episodes 350 --initial-q 0.5 --num-envs 12
 ```
 
-Trening od razu zaczyna grać. Pierwszy wiersz potwierdza ustawienia, kolejne to
-ukończone gry:
+To ustawienia treningu v4 z [docs/wyniki.md](../docs/wyniki.md). Trening od razu zaczyna
+grać. Pierwszy wiersz potwierdza ustawienia, kolejne to ukończone gry (przykład
+z treningu `q_easy_v4`):
 
 ```text
-run: runs/q_baseline | map=Simple64 opponent=Easy | state space: 7200 states | decision interval 1.43 s of game time | 12 game(s) in parallel
-ep    1/500 Tie     return=+1.124 eps=1.00 game=20.0min wall=  60s marines=143 states= 147 win1=0%
-ep    2/500 Victory return=+2.100 eps=1.00 game=14.2min wall=  42s marines=137 states= 147 win2=50%
+run: runs/q_easy_v4 | map=Simple64 opponent=Easy | state space: 7200 states | decision interval 1.43 s of game time | 12 game(s) in parallel
+ep    1/500 Defeat  return=-1.264 eps=1.00 game=19.5min wall= 102s marines=114 states= 275 win1=0%
+ep    2/500 Victory return=+2.079 eps=1.00 game=12.6min wall=  70s marines=128 states= 275 win2=50%
+ep    3/500 Victory return=+2.255 eps=0.99 game=15.9min wall=  88s marines=146 states= 275 win3=67%
+...
+ep  500/500 Victory return=+1.907 eps=0.05 game=13.3min wall=  33s marines= 88 states= 727 win20=55%
+done: 500 episodes finished, 727 states visited, table: runs/q_easy_v4/qtable.npz
 ```
 
 | Pole | Znaczenie |
@@ -49,7 +54,7 @@ ep    2/500 Victory return=+2.100 eps=1.00 game=14.2min wall=  42s marines=137 s
 | `--gamma` | 0,99 | Dyskonto na interwał decyzyjny (1,43 s gry). |
 | `--epsilon-start`, `--epsilon-end` | 1,0 i 0,05 | Eksploracja na początku i po wygaszeniu. |
 | `--epsilon-decay-episodes` | 150 | Przez ile gier epsilon liniowo maleje. |
-| `--initial-q` | 0 | Wartość początkowa nieodwiedzonych par stan-akcja. |
+| `--initial-q` | 0 | Wartość początkowa nieodwiedzonych par stan-akcja. Treningi v3–v5 używały 0,5; uzasadnienie w [docs/model-a-q-learning.md](../docs/model-a-q-learning.md#hiperparametry). |
 | `--seed` | 0 | Ziarno agenta. Gra numer `n` dostaje ziarno `seed + n`. |
 | `--checkpoint-every` | 25 | Co ile gier zapisać numerowaną kopię tablicy. |
 | `--replay-every` | 50 | Co ile gier zapisać powtórkę (0 wyłącza). |
@@ -61,11 +66,17 @@ są takie same jak w `scbot.play`. Pełna lista: `python -m scbot.train_q --help
 
 **Ile gier naraz.** Jedna gra zajmuje około 1,5 rdzenia i 0,5–0,8 GB pamięci. Na maszynie
 z 24 wątkami i 16 GB dla Dockera 12 gier naraz dawało około 11 ukończonych gier na
-minutę. Zacznij od liczby rdzeni fizycznych podzielonej przez 1,5.
+minutę, czyli 500 gier w 45 minut. Zacznij od liczby rdzeni fizycznych podzielonej przez 1,5.
 
 ### 3. Podglądaj postęp
 
-W drugim terminalu:
+Tabela z przebiegu treningu w blokach gier (działa w trakcie i nie wymaga gry):
+
+```bash
+uv run python -m scbot.report runs/q_baseline --block 50
+```
+
+Wykresy na żywo, w drugim terminalu:
 
 ```bash
 docker compose up tensorboard
@@ -135,7 +146,12 @@ treningu, rób to w osobnej kopii repozytorium (`git worktree`).
 
 ## Czego się spodziewać
 
-Wyniki referencyjnych treningów, razem z czasem trwania, są w
-[docs/wyniki.md](../docs/wyniki.md). W początkowej fazie (epsilon bliski 1) agent gra
-niemal losowo i odsetek wygranych odpowiada agentowi losowemu. Poprawa pojawia się
-dopiero, gdy epsilon wyraźnie spadnie.
+Wyniki dotychczasowych treningów, razem z czasem trwania, są w
+[docs/wyniki.md](../docs/wyniki.md). W skrócie:
+
+- W początkowej fazie (epsilon bliski 1) agent gra niemal losowo i odsetek wygranych
+  odpowiada agentowi losowemu. Poprawa pojawia się, gdy epsilon wyraźnie spadnie.
+- Wynik w blokach po 50 gier waha się o kilkanaście punktów procentowych. Oceniaj trend
+  z kilku bloków, nie pojedynczy blok.
+- Wynik z końcówki treningu i ocena zachłanna zapisanej tablicy mogą się bardzo
+  różnić. Po treningu oceń tablicę oboma sposobami z [runbooka 05](05-ewaluacja-i-powtorki.md).

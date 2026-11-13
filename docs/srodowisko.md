@@ -129,7 +129,7 @@ kolumny w tablicy Q i wyjścia sieci.
 |---|-------|---------------|---------------------------|
 | 0 | `NO_OP` | zawsze | Nic. Agent czeka do 10 s gry albo do pojawienia się nowej opcji (patrz „Punkty decyzyjne"). |
 | 1 | `TRAIN_SCV` | jest bezczynne Command Center, stać nas (50 minerałów, 1 populacji), SCV żywych i w produkcji jest mniej niż limit | Każde bezczynne Command Center zaczyna szkolić jednego SCV. |
-| 2 | `BUILD_SUPPLY_DEPOT` | 100 minerałów, limit populacji poniżej 200, w budowie mniej niż 2 magazyny | Najbliższy wolny SCV buduje magazyn przy głównej bazie. |
+| 2 | `BUILD_SUPPLY_DEPOT` | 100 minerałów, limit populacji poniżej 200, w budowie mniej niż 2 magazyny, zapas populacji poniżej 16 | Najbliższy wolny SCV buduje magazyn przy głównej bazie. |
 | 3 | `BUILD_BARRACKS` | 150 minerałów, jest ukończony magazyn, koszar razem z budowanymi mniej niż 6, w budowie mniej niż 2 | SCV buduje koszary przed główną bazą. |
 | 4 | `TRAIN_MARINE` | są bezczynne koszary, stać nas (50 minerałów, 1 populacji) | Każde bezczynne koszary zaczynają szkolić jednego Marine. |
 | 5 | `EXPAND` | 400 minerałów, baz razem z budowanymi mniej niż 3, żadna baza nie jest w budowie, po naszej stronie mapy jest miejsce, w którym da się postawić bazę | SCV stawia Command Center na najbliższej takiej ekspansji. |
@@ -158,6 +158,18 @@ konta, tak jak gra.
 
 Bez rezerwacji agent mógł wydać pieniądze, zanim SCV doszedł na miejsce, i rozkaz
 przepadał. Wpływu samej rezerwacji na wyniki nie zmierzyliśmy osobno.
+
+### Limit zapasu populacji
+
+`BUILD_SUPPLY_DEPOT` jest oferowane tylko wtedy, gdy zapas populacji jest mniejszy niż
+`MacroConfig.max_spare_supply` (domyślnie 16). Zapas to wolna populacja powiększona
+o 8 za każdy magazyn zlecony lub w budowie (`MacroExecutor.spare_supply`). Sześć koszar
+i Command Center zużywają około 7 populacji w czasie budowy jednego magazynu, więc 16 to
+zapas na dwa magazyny.
+
+Bez tego limitu magazyn dało się zbudować zawsze, gdy było 100 minerałów. Nagroda nie
+mówi, że magazyn jest zbędny, więc zamrożona tablica Q potrafiła budować 38 magazynów na
+grę zamiast szkolić Marines ([wyniki.md](wyniki.md)).
 
 ### Gdzie wolno się rozbudować
 

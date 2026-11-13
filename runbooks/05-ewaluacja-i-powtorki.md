@@ -21,10 +21,17 @@ docker compose run --rm sc2 python -m scbot.evaluate --agent q --model runs/q_ba
 | `--episodes` | Liczba gier. |
 | `--num-envs` | Ile gier naraz. Każda zajmuje około 1,5 rdzenia i 0,5–0,8 GB pamięci. |
 | `--seed` | Bazowe ziarno. Gra numer `n` dostaje ziarno `seed + n`. |
+| `--explore` | Agent zachowuje eksplorację z treningu (dla tablicy Q: jej końcowy epsilon), ale się nie uczy. |
 | `--out` | Plik JSON z wynikami wszystkich gier. |
 | `--replay-dir` | Katalog, do którego trafi powtórka każdej gry. |
 
-W ewaluacji agent Q-Learning gra zachłannie (bez eksploracji) i nie zmienia tablicy.
+Domyślnie agent Q-Learning gra zachłannie (bez eksploracji) i nie zmienia tablicy.
+
+**Oceń tablicę na dwa sposoby.** Ocena zachłanna jednej zapisanej tablicy bywa
+niestabilna: dla kolejnych treningów dawała 53%, 60% i 23%
+([docs/wyniki.md](../docs/wyniki.md)). Uruchom więc tę samą komendę drugi raz
+z `--explore` i porównaj. Warto też ocenić kilka checkpointów
+z `runs/<nazwa>/checkpoints/`, a nie tylko ostatnią tablicę.
 
 ### 2. Odczytaj podsumowanie
 
