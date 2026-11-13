@@ -5,6 +5,7 @@ są osobno, w [runbookach](../runbooks/README.md).
 
 | Dokument | Odpowiada na pytanie |
 |----------|----------------------|
+| [przewodnik-po-kodzie.md](przewodnik-po-kodzie.md) | **Od czego zacząć czytanie kodu?** Przejście przez cały kod w kolejności wykonania, z odnośnikami do linii. |
 | [status-projektu.md](status-projektu.md) | Co z założeń projektu jest zrobione, a czego jeszcze nie ma? |
 | [architektura.md](architektura.md) | Z jakich części składa się projekt i jak rozmawiają ze sobą? |
 | [srodowisko.md](srodowisko.md) | Co dokładnie widzi agent, jakie ma akcje i za co dostaje nagrodę? |
@@ -12,5 +13,5 @@ są osobno, w [runbookach](../runbooks/README.md).
 | [wyniki.md](wyniki.md) | Jakie wyniki i jaką wydajność zmierzyliśmy do tej pory? |
 | [rozwijanie.md](rozwijanie.md) | Jak dodać własnego agenta, cechę, akcję albo składnik nagrody? |
 
-Proponowana kolejność czytania dla nowej osoby w zespole: status, architektura,
-środowisko, a potem dokument dotyczący własnego zadania.
+Proponowana kolejność dla nowej osoby w zespole: status, architektura, a potem
+przewodnik po kodzie, który sam odsyła do pozostałych dokumentów we właściwych miejscach.

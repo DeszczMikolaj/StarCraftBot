@@ -52,6 +52,7 @@ docker compose run --rm sc2 python -m scbot.evaluate --agent q --model runs/q_ba
 |---------|-----------|
 | [`runbooks/`](runbooks/README.md) | Instrukcje krok po kroku: środowisko, pierwsza gra, trening, ewaluacja, testy, problemy |
 | [`docs/`](docs/README.md) | Dokumentacja: architektura, środowisko, Model A, wyniki, rozwijanie, status |
+| [`docs/przewodnik-po-kodzie.md`](docs/przewodnik-po-kodzie.md) | Punkt wejścia do czytania kodu: krok po kroku, z odnośnikami do linii |
 | `src/scbot/env/` | Wspólne środowisko: obserwacje, akcje makro, nagroda, warstwa skryptowa, proces gry |
 | `src/scbot/agents/` | Interfejs agenta, agent losowy i skryptowy, tabelaryczny Q-Learning |
 | `src/scbot/*.py` | Skrypty: `doctor`, `play`, `train_q`, `evaluate` |

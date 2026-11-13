@@ -141,12 +141,17 @@ przyczyna.
 
 ### Wniosek dla środowiska
 
-Do naprawy pozostaje maska `EXPAND`
-([srodowisko.md](srodowisko.md#znana-wada-expand-oferowane-gdy-nie-da-się-go-wykonać)).
-Ta wada działała we wszystkich trzech treningach, więc żaden z nich nie pokazuje, jak
-Q-Learning radzi sobie na poprawnym środowisku.
+Maska oferuje teraz `EXPAND` tylko wtedy, gdy po naszej stronie mapy jest miejsce,
+w którym bazę da się postawić ([srodowisko.md](srodowisko.md#gdzie-wolno-się-rozbudować)).
+Sprawdzenie na agencie losowym przeciw Easy (24 gry): `EXPAND` średnio 2,2 raza na grę
+zamiast 34, odrzuconych akcji 1,3 na grę zamiast 32.
+
+Wada działała w treningach v1, v2 i v3, więc żaden z nich nie pokazuje, jak Q-Learning
+radzi sobie na poprawnym środowisku.
 
 ## Agenci odniesienia po dodaniu rezerwacji minerałów
+
+Pomiar sprzed poprawki maski `EXPAND`. To z nim należy porównywać trening v3.
 
 | Agent | Przeciwnik | W / P / R | Wygrane (95% CI) |
 |-------|------------|-----------|------------------|
@@ -159,11 +164,45 @@ Q-Learning radzi sobie na poprawnym środowisku.
 
 ## Model A, trening v3: rezerwacja minerałów i optymistyczne wartości początkowe
 
-Trening (500 gier, `--initial-q 0.5`) był w toku w chwili zapisu tego dokumentu i nie
-został jeszcze oceniony. Po 264 grach odsetek wygranych w blokach po 50 gier wynosił
-44%, 52%, 60%, 42% i 44%, bez wyraźnego trendu, a liczba odrzuconych akcji rosła
-z 25 do 46 na grę. Dane są w `runs/q_easy_v3/`; streszczenie pokaże
-`uv run python -m scbot.report runs/q_easy_v3`.
+Ustawienia jak w v2, dodatkowo rezerwacja minerałów w środowisku i wartości początkowe
+tablicy 0,5 zamiast 0 (`--initial-q 0.5`). Przy wartościach początkowych powyżej zera
+akcje jeszcze niewypróbowane wyglądają lepiej niż wypróbowane, a dzięki dyskontu
+zależnemu od czasu czekanie wypada od początku gorzej niż działanie.
+
+| Gry | W | P | R | Wygrane | Śr. nagroda | Marines na grę | Odrzuconych akcji na grę | ε na końcu bloku |
+|-----|---|---|---|---------|-------------|----------------|--------------------------|------------------|
+| 1–50 | 22 | 27 | 1 | 44% | +0,315 | 118 | 25 | 0,87 |
+| 51–100 | 26 | 18 | 6 | 52% | +0,703 | 122 | 29 | 0,73 |
+| 101–150 | 30 | 14 | 6 | 60% | +0,882 | 113 | 32 | 0,60 |
+| 151–200 | 21 | 23 | 6 | 42% | +0,287 | 113 | 39 | 0,46 |
+| 201–250 | 22 | 26 | 2 | 44% | +0,258 | 113 | 46 | 0,32 |
+| 251–300 | 26 | 17 | 7 | 52% | +0,513 | 99 | 51 | 0,19 |
+| 301–350 | 24 | 20 | 6 | 48% | +0,365 | 98 | 62 | 0,05 |
+| 351–400 | 23 | 19 | 8 | 46% | +0,361 | 101 | 86 | 0,05 |
+| 401–450 | 22 | 24 | 4 | 44% | +0,231 | 101 | 81 | 0,05 |
+| 451–500 | 15 | 31 | 4 | 30% | −0,256 | 97 | 89 | 0,05 |
+
+Koszt: 63 minuty czasu rzeczywistego (równolegle działały pomiary odniesienia),
+7755 minut czasu gry, 137 040 decyzji, 729 odwiedzonych stanów.
+
+Ocena zachłanna tablicy v3, 30 gier przeciw Easy: 18 wygranych, 10 przegranych,
+2 remisy, czyli 60% (95% CI 42–75%), wobec 33% agenta losowego na tym samym środowisku
+(16 z 48, CI 22–48%).
+
+### Co widać
+
+- Tablica gra lepiej niż agent losowy, ale w trakcie treningu wynik nie rósł: wahał się
+  między 42% a 60%, a w ostatnim bloku spadł do 30%.
+- Liczba odrzuconych akcji na grę rosła przez cały trening, z 25 do 89. To niemal
+  wyłącznie niewykonalne `EXPAND`. Im mniej eksploracji, tym chętniej agent sięgał po
+  akcję, która nic nie kosztuje. To najmocniejszy dowód, że maska musi być uczciwa.
+- Ocena zachłanna (60%) wypadła lepiej niż końcówka treningu (42% w ostatnich 200 grach
+  przy ε = 0,05). Ten sam efekt był w v1. Możliwe wyjaśnienie: losowe 5% akcji obejmuje
+  też `ATTACK` i `RETREAT`, które wiążą armię na 30 sekund. Nie sprawdziliśmy tego.
+
+## Model A, trening v4: poprawiona maska `EXPAND`
+
+W toku w chwili zapisu tego dokumentu. Ustawienia jak w v3.
 
 ## Wydajność
 

@@ -132,7 +132,7 @@ kolumny w tablicy Q i wyjścia sieci.
 | 2 | `BUILD_SUPPLY_DEPOT` | 100 minerałów, limit populacji poniżej 200, w budowie mniej niż 2 magazyny | Najbliższy wolny SCV buduje magazyn przy głównej bazie. |
 | 3 | `BUILD_BARRACKS` | 150 minerałów, jest ukończony magazyn, koszar razem z budowanymi mniej niż 6, w budowie mniej niż 2 | SCV buduje koszary przed główną bazą. |
 | 4 | `TRAIN_MARINE` | są bezczynne koszary, stać nas (50 minerałów, 1 populacji) | Każde bezczynne koszary zaczynają szkolić jednego Marine. |
-| 5 | `EXPAND` | 400 minerałów, baz razem z budowanymi mniej niż 3, żadna baza nie jest w budowie | SCV stawia Command Center na najbliższej wolnej ekspansji. |
+| 5 | `EXPAND` | 400 minerałów, baz razem z budowanymi mniej niż 3, żadna baza nie jest w budowie, po naszej stronie mapy jest miejsce, w którym da się postawić bazę | SCV stawia Command Center na najbliższej takiej ekspansji. |
 | 6 | `ATTACK` | armia jest w obronie, ma co najmniej jedną jednostkę, minęło 30 s gry od ostatniej zmiany trybu | Armia przechodzi w tryb ataku. |
 | 7 | `RETREAT` | armia jest w ataku, minęło 30 s gry od ostatniej zmiany trybu | Armia wraca do bazy i przechodzi w tryb obrony. |
 
@@ -159,16 +159,23 @@ konta, tak jak gra.
 Bez rezerwacji agent mógł wydać pieniądze, zanim SCV doszedł na miejsce, i rozkaz
 przepadał. Wpływu samej rezerwacji na wyniki nie zmierzyliśmy osobno.
 
-### Znana wada: `EXPAND` oferowane, gdy nie da się go wykonać
+### Gdzie wolno się rozbudować
+
+`EXPAND` jest oferowane tylko wtedy, gdy warstwa skryptowa zna miejsce, w którym bazę da
+się postawić (`MacroExecutor.refresh_expansion_site`, odświeżane co 8 kroków bota).
+Miejsce musi być bliżej naszego startu niż startu przeciwnika, nie może być zajęte przez
+naszą bazę, musi dać się tam teraz postawić Command Center i musi być osiągalne dla SCV.
 
 Na `Simple64` są cztery miejsca na bazę: dwa startowe i po jednej ekspansji naturalnej.
-Po zajęciu własnej ekspansji „najbliższą wolną" jest ekspansja przeciwnika, gdzie budowa
-jest zwykle odrzucana. Maska mimo to oferuje `EXPAND` (limit baz to 3), a odrzucona
-akcja kosztuje tylko jeden interwał, więc działa jak tanie „poczekaj". W 48 grach agenta
-losowego z Easy `EXPAND` padało średnio 34 razy na grę i prawie zawsze było odrzucane
-(`invalid_actions` średnio 32 na grę). Do naprawy: maska powinna oferować `EXPAND` tylko
-dla lokalizacji po naszej stronie mapy, na której da się postawić budynek
-([wyniki.md](wyniki.md)).
+Po naszej stronie mapy jest więc jedna ekspansja i w praktyce agent ma najwyżej dwie
+bazy, mimo że limit w `MacroConfig` wynosi 3.
+
+Wcześniej maska oferowała `EXPAND` zawsze, gdy było wolne miejsce w limicie baz. Po
+zajęciu własnej ekspansji „najbliższą wolną" była ekspansja przeciwnika, gdzie budowa
+była odrzucana. Odrzucona akcja kosztowała jeden interwał, więc działała jak tanie
+„poczekaj", a uczący się agent wybierał ją coraz częściej. Pomiar na agencie losowym
+przeciw Easy: przed poprawką `EXPAND` padało średnio 34 razy na grę i odrzucane były
+średnio 32 akcje na grę, po poprawce odpowiednio 2,2 i 1,3 ([wyniki.md](wyniki.md)).
 
 ### Co skrypt robi sam, bez decyzji agenta
 
@@ -179,7 +186,8 @@ W każdym kroku bota (`MacroExecutor.housekeeping`):
 - **Armia w trybie obrony** stoi w punkcie zbiórki przed bazą i atakuje jednostki wroga,
   które podejdą na 15 jednostek odległości do naszych budynków.
 - **Co 8 kroków bota:** bezczynni SCV wracają do wydobycia, przerwane budowy dostają
-  nowego SCV, magazyny są opuszczane, żeby nie blokowały przejścia.
+  nowego SCV, magazyny są opuszczane, żeby nie blokowały przejścia, a miejsce pod
+  następną bazę jest sprawdzane na nowo.
 
 Armia to wszystkie jednostki poza SCV i MULE.
 

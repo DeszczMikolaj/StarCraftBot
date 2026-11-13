@@ -47,6 +47,12 @@ only after changing `pyproject.toml`, `uv.lock` or `docker/`.
   run to finish or work in a separate `git worktree`.
 - Keep the runbooks truthful: when a documented command or its output changes, re-run it
   and update the runbook. `runbooks/02-klient-windows.md` is explicitly unverified.
+- `docs/przewodnik-po-kodzie.md` links to exact line ranges. After moving code, run
+  `uv run pytest tests/test_docs_links.py` and fix the ranges it reports; also re-read
+  the numeric ranges of the file you changed, because the test can only verify links
+  whose text names an identifier.
+- The action mask must be honest: never offer an action that `MacroExecutor.execute`
+  would reject. A rejected action is nearly free, and learning agents exploit that.
 
 ## Layout
 
