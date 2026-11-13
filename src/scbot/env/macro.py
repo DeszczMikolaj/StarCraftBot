@@ -11,6 +11,7 @@ action they pick, not from how well it is carried out. The layer has three jobs:
 
 from __future__ import annotations
 
+import math
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
@@ -56,6 +57,8 @@ class MacroExecutor:
         self.army_mode = ArmyMode.DEFEND
         self._mode_changed = False
         self._mode_changed_loop: int | None = None
+        # Where EXPAND would build; None when no base location is available.
+        self.expansion_site: Point2 | None = None
         self._search_targets: list[Point2] = []
         self._search_index = 0
         self._searching = False
@@ -160,7 +163,8 @@ class MacroExecutor:
             )
 
             mask[MacroAction.EXPAND] = (
-                bot.townhalls.amount < cfg.max_townhalls
+                self.expansion_site is not None
+                and bot.townhalls.amount < cfg.max_townhalls
                 and self.pending_structures(UnitTypeId.COMMANDCENTER) == 0
                 and self.can_afford(UnitTypeId.COMMANDCENTER)
             )
@@ -225,16 +229,43 @@ class MacroExecutor:
         return base.towards(bot.game_info.map_center, distance)
 
     async def _expand(self) -> bool:
-        location = await self.bot.get_next_expansion()
-        if location is None:
+        site = self.expansion_site
+        if site is None:
             return False
-        return await self.bot.build(
-            UnitTypeId.COMMANDCENTER,
-            near=location,
-            max_distance=10,
-            random_alternative=False,
-            placement_step=1,
-        )
+        # max_distance=0: build exactly on the base location or not at all.
+        ordered = await self.bot.build(UnitTypeId.COMMANDCENTER, near=site, max_distance=0)
+        if not ordered:
+            self.expansion_site = None  # stop offering it until the next refresh
+        return ordered
+
+    async def refresh_expansion_site(self) -> None:
+        """Find where EXPAND would build: the nearest free base location on our side.
+
+        The action mask must not offer an expansion that cannot be carried out. A
+        location qualifies when it is closer to our start than to the enemy's, no
+        Command Center of ours stands there, one can be placed there right now and
+        workers can walk to it.
+        """
+        bot = self.bot
+        self.expansion_site = None
+        if not bot.townhalls or bot.townhalls.amount >= self.config.max_townhalls:
+            return
+        start = bot.start_location
+        enemy_start = bot.enemy_start_locations[0]
+        best_distance = math.inf
+        for location in bot.expansion_locations_list:
+            if location.distance_to(start) >= location.distance_to(enemy_start):
+                continue  # the enemy's half of the map
+            if any(
+                townhall.distance_to(location) < bot.EXPANSION_GAP_THRESHOLD
+                for townhall in bot.townhalls
+            ):
+                continue  # already ours
+            if not await bot.can_place_single(UnitTypeId.COMMANDCENTER, location):
+                continue  # blocked, e.g. by enemy units or buildings
+            distance = await bot.client.query_pathing(start, location)
+            if distance is not None and distance < best_distance:
+                self.expansion_site, best_distance = location, distance
 
     def _set_army_mode(self, mode: ArmyMode) -> None:
         self.army_mode = mode
@@ -248,6 +279,7 @@ class MacroExecutor:
         """Run on every bot step, after the agent's action (if any) was executed."""
         if iteration % self.config.housekeeping_interval == 0:
             await self.bot.distribute_workers()
+            await self.refresh_expansion_site()
             self._resume_abandoned_constructions()
             self._lower_supply_depots()
         self._control_army(iteration)

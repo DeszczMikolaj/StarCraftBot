@@ -14,7 +14,7 @@ from scbot.config import RewardConfig
 class RewardCounters:
     """Cumulative game counters the shaping terms are derived from.
 
-    Every field must have a weight of the same name in ``RewardConfig``.
+    Every field needs a weight in ``RewardConfig``, linked in ``_WEIGHT_NAMES`` below.
     """
 
     marines_trained: float = 0.0

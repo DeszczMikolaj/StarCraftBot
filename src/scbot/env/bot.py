@@ -56,7 +56,7 @@ class MacroBot(BotAI):
         self._macro = MacroExecutor(self, self._config.macro)
 
     async def on_unit_created(self, unit: Unit) -> None:
-        # Also fires once for every unit that exists at game start (the first 12 SCVs).
+        # python-sc2 does not report the units that exist at game start (the 12 SCVs).
         self._units_trained[unit.type_id] += 1
 
     async def on_step(self, iteration: int) -> None:

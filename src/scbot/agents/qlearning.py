@@ -85,7 +85,7 @@ class StateDiscretizer:
 
     def __call__(self, obs: np.ndarray) -> State:
         # Undo the observation scaling. Rounding removes float32 noise, which would
-        # otherwise push exact thresholds (e.g. 50 minerals) into the lower bucket.
+        # otherwise push some exact thresholds (e.g. 1 Marine) into the lower bucket.
         raw = np.round(obs[self._indices].astype(np.float64) * self._scales, 3)
         return tuple(
             int(np.searchsorted(edges, value, side="right"))
