@@ -94,10 +94,55 @@ wyboru, `NO_OP` oznacza czekanie do 10 sekund, a dyskonto zależy od czasu, któ
 faktycznie upłynął. Czekanie przy dostępnej akcji kosztuje wtedy około 6% wartości
 zamiast 1%.
 
-## Model A, trening v2: punkty decyzyjne sterowane zdarzeniami
+### Ocena zachłanna tablicy v1
 
-W toku. Te same ustawienia co v1, nowe zasady środowiska. Wyniki zostaną dopisane po
-zakończeniu treningu.
+30 gier bez eksploracji i bez uczenia, przeciw Easy, na zasadach odpowiadających v1
+(`--wait-intervals 1`): 16 wygranych, 12 przegranych, 2 remisy, czyli 53% (95% CI
+36–70%). Średni czas gry 14,6 min, średnia wartość zniszczeń 5283 wobec strat 9028.
+
+Punktem odniesienia dla tych zasad jest początek treningu v1, gdy akcje były niemal
+losowe: 40 wygranych w pierwszych 150 grach (27%). Tablica v1 gra więc lepiej niż agent
+losowy, ale przedział ufności przy 30 grach jest szeroki, a wynik w końcówce treningu
+(37% przy ε = 0,05) był niższy niż w ocenie zachłannej.
+
+## Model A, trening v2: punkty decyzyjne sterowane zdarzeniami (przerwany)
+
+Te same ustawienia co v1, nowe zasady punktów decyzyjnych. Trening przerwaliśmy po 99
+grach (11 minut), bo wynik systematycznie się pogarszał.
+
+| Gry | W | P | R | Wygrane | Śr. nagroda | Decyzji na grę | Marines na grę | `EXPAND` na grę | `BUILD_BARRACKS` na grę | ε na końcu bloku |
+|-----|---|---|---|---------|-------------|----------------|----------------|-----------------|-------------------------|------------------|
+| 1–20 | 14 | 3 | 3 | 70% | +1,409 | 224 | 129 | 21,5 | 10,3 | 0,95 |
+| 21–40 | 10 | 7 | 3 | 50% | +0,674 | 255 | 116 | 30,8 | 15,9 | 0,89 |
+| 41–60 | 8 | 11 | 1 | 40% | +0,275 | 257 | 110 | 33,7 | 17,9 | 0,84 |
+| 61–80 | 5 | 14 | 1 | 25% | −0,308 | 261 | 103 | 34,9 | 21,1 | 0,79 |
+| 81–99 | 6 | 12 | 1 | 32% | −0,116 | 252 | 103 | 30,7 | 19,4 | 0,73 |
+
+### Co się stało
+
+Liczba decyzji na grę spadła z około 740 do 240, a udział `NO_OP` z 74% do 37%, czyli
+zmiana punktów decyzyjnych zadziałała zgodnie z planem. Ujawniła jednak inną wadę
+środowiska. Już przy niewielkim udziale akcji zachłannych (ε od 0,95 do 0,79) agent
+coraz częściej wybierał `EXPAND` i `BUILD_BARRACKS`: odpowiednio 35 i 21 razy na grę,
+przy limicie trzech baz i sześciu koszar. Liczba wyszkolonych Marines spadała, a z nią
+odsetek wygranych.
+
+Powodem były **rozkazy budowy, które przepadały**. Gra pobiera koszt budynku dopiero przy
+rozpoczęciu budowy. Jeśli agent wydał minerały, zanim SCV doszedł na miejsce, budowa nie
+ruszała, a akcja znów stawała się dostępna. Taki rozkaz nic nie kosztował, więc jego
+wartość w tablicy nie spadała, a każde jego wybranie zajmowało decyzję, która mogła
+pójść na produkcję.
+
+### Wniosek dla środowiska
+
+Warstwa skryptowa rezerwuje teraz minerały na zlecone budynki
+([srodowisko.md](srodowisko.md#rezerwacja-minerałów)). Ta sama wada działała też w v1,
+więc v1 i v2 nie pokazują, jak Q-Learning radzi sobie na poprawnym środowisku. Pokazują
+natomiast, jak czuły jest na jego niedoskonałości.
+
+## Model A, trening v3: rezerwacja minerałów i optymistyczne wartości początkowe
+
+W toku. Wyniki zostaną dopisane po zakończeniu treningu.
 
 ## Wydajność
 

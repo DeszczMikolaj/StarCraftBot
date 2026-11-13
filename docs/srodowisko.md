@@ -76,8 +76,8 @@ czyli mniej niż szum estymacji. Tablica Q nie potrafiła odróżnić „zrób t
 „poczekaj". Szczegóły i liczby są w [wyniki.md](wyniki.md).
 
 Podsumowanie etapu 1 podawało jako przykład decyzję „co 8–10 kroków gry". Interwał
-32 pętli i pozostałe wartości zmienia się w `EnvConfig`; interwał także z linii poleceń
-(`--game-step`, `--decision-interval`).
+32 pętli i pozostałe wartości zmienia się w `EnvConfig`; interwał i czas czekania także
+z linii poleceń (`--game-step`, `--decision-interval`, `--wait-intervals`).
 
 ## Obserwacja
 
@@ -146,6 +146,21 @@ Center. Wszystkie progi są w `MacroConfig` (`config.py`).
 teraz wykonać. Wybranie akcji spoza maski nie jest błędem. Akcja nie zostanie wykonana,
 a kolejny krok zwróci `info["last_action_executed"] == False`. Metoda
 `env.action_masks()` zwraca tę samą maskę w konwencji biblioteki sb3-contrib.
+
+### Rezerwacja minerałów
+
+Gra pobiera koszt budynku dopiero w chwili rozpoczęcia budowy, a SCV idzie na miejsce od
+kilku do kilkunastu sekund. Warstwa skryptowa traktuje koszt zleconych, ale jeszcze
+nierozpoczętych budynków jako zarezerwowany: maska akcji i liczba szkolonych jednostek
+liczą się od minerałów wolnych, czyli stanu konta pomniejszonego o rezerwę
+(`MacroExecutor.reserved_minerals`). Cecha `minerals` w obserwacji pokazuje pełny stan
+konta, tak jak gra.
+
+Bez rezerwacji agent mógł wydać pieniądze, zanim SCV doszedł na miejsce. Rozkaz wtedy
+przepadał bez śladu i akcja znów była dostępna. W grach agenta losowego `EXPAND` padało
+od kilkunastu do ponad 60 razy na grę przy limicie trzech baz, a `BUILD_BARRACKS` do 41
+razy przy limicie sześciu koszar. Uczący się agent wybierał te akcje coraz częściej, bo
+nic go nie kosztowały ([wyniki.md](wyniki.md)).
 
 ### Co skrypt robi sam, bez decyzji agenta
 

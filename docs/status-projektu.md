@@ -48,6 +48,8 @@ Ich autorzy mogą je zmieniać w granicach opisanych w [rozwijanie.md](rozwijani
   wszystkie modele powinny używać tych samych wartości.
 - **Minimalny czas rozkazu dla armii** (30 s gry) nie wynika z dokumentów. Został dodany,
   bo bez niego eksploracja była nieskuteczna.
+- **Rezerwacja minerałów na zlecone budynki** też nie wynika z dokumentów. Bez niej
+  rozkazy budowy przepadały, gdy agent wydał pieniądze przed dojściem SCV.
 - **Wersja gry.** Headless działa na linuksowej wersji 4.10, starszej niż klient Windows.
 - **Brak gazu.** Bot nie buduje rafinerii ani jednostek innych niż Marine. Rozszerzenie
   listy akcji jest opisane w [rozwijanie.md](rozwijanie.md).

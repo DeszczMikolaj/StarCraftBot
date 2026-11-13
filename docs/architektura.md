@@ -123,6 +123,11 @@ go na koszary.
 odstęp czasu. Pominięte są chwile, w których jedyną opcją jest `NO_OP`, a wybór `NO_OP`
 oznacza czekanie do 10 sekund. Powód i pomiary: [srodowisko.md](srodowisko.md#punkty-decyzyjne).
 
+**Zlecony budynek rezerwuje minerały.** Gra pobiera koszt dopiero przy rozpoczęciu
+budowy, więc do tego czasu warstwa skryptowa nie pozwala wydać tych pieniędzy na nic
+innego. Akcja „zbuduj X" ma dzięki temu przewidywalny skutek. Opis i pomiary:
+[srodowisko.md](srodowisko.md#rezerwacja-minerałów).
+
 **Rozkaz dla armii trwa minimum 30 sekund gry.** Po `ATTACK` lub `RETREAT` rozkaz
 przeciwny jest przez ten czas niedostępny. Bez tego losowa eksploracja przełącza armię
 co decyzję i jednostki nigdy nie dochodzą do bazy przeciwnika. Zmierzone przy niemal
