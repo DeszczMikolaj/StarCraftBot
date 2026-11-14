@@ -32,23 +32,23 @@ Przykładowy fragment wyjścia:
 map=Simple64 opponent=VeryEasy agent=scripted decision interval 32 game loops (1.43 s of game time)
 starting StarCraft II...
 [00:00] #0     min=50 supply=12 cap=15 scv=12 cc=1 depots=0 rax=0 marines=0 enemy=0 killed=0 lost=0 | action=TRAIN_SCV reward=+0.0010 | can: NO_OP,TRAIN_SCV
-[00:55] #10    min=70 supply=16 cap=23 scv=16 cc=1 depots=1 rax=0 marines=0 enemy=0 killed=0 lost=0 | action=NO_OP reward=+0.0000 | can: NO_OP,TRAIN_SCV
-[01:47] #20    min=445 supply=16 cap=23 scv=16 cc=1 depots=1 rax=2 marines=0 enemy=0 killed=0 lost=0 | action=TRAIN_MARINE reward=+0.0000 | can: NO_OP,TRAIN_SCV,BUILD_SUPPLY_DEPOT,TRAIN_MARINE,EXPAND
-[02:58] #50    min=115 supply=28 cap=31 scv=16 cc=1 depots=2 rax=4 marines=8 enemy=0 killed=0 lost=0 | action=NO_OP reward=+0.0020 | can: NO_OP,TRAIN_SCV,BUILD_SUPPLY_DEPOT,ATTACK
-[04:04] #80    min=40 supply=46 cap=62 scv=21 cc=2 depots=4 rax=4 marines=20 enemy=10 killed=600 lost=50 | action=NO_OP reward=+0.0070 | can: NO_OP,RETREAT
+[01:01] #10    min=145 supply=16 cap=23 scv=16 cc=1 depots=1 rax=0 marines=0 enemy=0 killed=0 lost=0 | action=NO_OP reward=+0.0000 | can: NO_OP,TRAIN_SCV,BUILD_SUPPLY_DEPOT
+[01:51] #20    min=510 supply=17 cap=23 scv=16 cc=1 depots=1 rax=2 marines=0 enemy=0 killed=0 lost=0 | action=BUILD_BARRACKS reward=+0.0000 | can: NO_OP,TRAIN_SCV,BUILD_SUPPLY_DEPOT,BUILD_BARRACKS,TRAIN_MARINE
+[03:27] #50    min=150 supply=33 cap=54 scv=16 cc=2 depots=3 rax=4 marines=14 enemy=0 killed=0 lost=0 | action=TRAIN_MARINE reward=+0.0000 | can: NO_OP,BUILD_BARRACKS,TRAIN_MARINE,ATTACK
+[04:22] #70    min=90 supply=51 cap=62 scv=24 cc=2 depots=4 rax=4 marines=21 enemy=8 killed=750 lost=100 | action=NO_OP reward=+0.0040 | can: NO_OP,RETREAT
 ...
 result:        Victory
-game time:     5.1 min (119 decisions)
-wall time:     30.3 s
-return:        +1.357
-reward parts:  marines_trained=0.066, workers_trained=0.018, value_killed=0.275, value_lost=-0.0025, terminal=1
-actions:       NO_OP=50, TRAIN_SCV=19, BUILD_SUPPLY_DEPOT=8, BUILD_BARRACKS=6, TRAIN_MARINE=34, EXPAND=1, ATTACK=1, RETREAT=0
+game time:     5.5 min (103 decisions)
+wall time:     12.2 s
+return:        +1.375
+reward parts:  marines_trained=0.074, workers_trained=0.021, value_killed=0.285, value_lost=-0.005, terminal=1
+actions:       NO_OP=43, TRAIN_SCV=19, BUILD_SUPPLY_DEPOT=11, BUILD_BARRACKS=5, TRAIN_MARINE=23, EXPAND=1, ATTACK=1, RETREAT=0
 not executed:  0
 replay:        replays/pierwsza_gra.SC2Replay
 ```
 
-Czas rzeczywisty zależy od obciążenia maszyny: ta gra trwała 30 s przy treningu działającym
-w tle, a około 11 s na wolnej maszynie.
+Czas rzeczywisty zależy od obciążenia maszyny: 12 s na wolnej maszynie, a przy treningu
+działającym w tle nawet 30 s.
 
 ### 3. Odczytaj wynik
 
@@ -58,7 +58,7 @@ wybór ([docs/srodowisko.md](../docs/srodowisko.md#punkty-decyzyjne)).
 
 | Fragment | Znaczenie |
 |----------|-----------|
-| `[02:58]` | Czas gry. |
+| `[03:27]` | Czas gry. |
 | `#50` | Numer decyzji w tej grze. |
 | `min`, `supply`, `cap`, `scv`, `cc`, `depots`, `rax`, `marines` | Surowe odczyty: minerały, populacja zajęta i limit, SCV, Command Center, magazyny, koszary, Marines. |
 | `enemy`, `killed`, `lost` | Widoczne jednostki wroga, wartość zniszczonych jednostek wroga i wartość strat własnych (w surowcach). |

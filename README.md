@@ -6,7 +6,7 @@ złożoności na wspólnym środowisku.
 
 | Model | Podejście | Stan |
 |-------|-----------|------|
-| A | Tabelaryczny Q-Learning (bez sieci, punkt odniesienia) | Działa, patrz [docs/model-a-q-learning.md](docs/model-a-q-learning.md) |
+| A | Tabelaryczny Q-Learning (bez sieci, punkt odniesienia) | Działa: 88% wygranych z Easy po 500 grach treningowych, wobec 61% agenta losowego ([wyniki](docs/wyniki.md), [opis](docs/model-a-q-learning.md)) |
 | B | Deep Q-Learning (DQN) | Do zrobienia |
 | C | Proximal Policy Optimization (PPO) | Do zrobienia |
 

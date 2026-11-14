@@ -20,18 +20,19 @@ eksperyment powtórzony pięć razy.
 | v2 | agent pytany tylko, gdy ma wybór | 33% (8/24) | przerwany po 99 grach | nie oceniano |
 | v3 | rezerwacja minerałów, optymistyczne wartości początkowe | 33% (16/48) | 42% (84/200) | 60% (18/30) |
 | v4 | `EXPAND` tylko tam, gdzie da się budować | 40% (29/72) | 57,5% (115/200) | 23% (11/48) |
-| v5 | limit zapasu populacji | w toku | w toku | w toku |
+| v5 | limit zapasu populacji | 61% (44/72) | 94% (188/200) | 88% (42/48) |
 
 Agent skryptowy wygrywał z Easy 100% gier na każdej wersji środowiska.
 
 Trzy rzeczy, które warto wiedzieć przed czytaniem szczegółów:
 
-- **Na obecnym środowisku Q-Learning w trakcie treningu gra lepiej niż agent losowy**
-  (v4: 57,5% wobec 40%), ale daleko mu do agenta skryptowego (100%).
-- **Ocena zachłanna jednej zapisanej tablicy jest niestabilna**: 53%, 60% i 23% dla
-  kolejnych wersji. Różnice wartości między akcjami są mniejsze niż szum estymacji, więc
-  to, którą akcję tablica wskazuje jako najlepszą, zależy od chwili zapisu.
-- **Dotychczasowe wyniki są pomiarem środowiska w budowie**, nie ostateczną oceną metody.
+- **Na obecnym środowisku Q-Learning wyraźnie się uczy.** Tablica v5 wygrywa z Easy 88%
+  gier w ocenie zachłannej i 94% z eksploracją 5%, wobec 61% agenta losowego. Agent
+  skryptowy wygrywa 100%.
+- **To środowisko zdecydowało o wyniku, nie zmiana algorytmu.** Treningi v3, v4 i v5 mają
+  te same hiperparametry. Różnią się tylko tym, jakie akcje oferuje maska.
+- **Tablica uczona przeciw Easy słabo przenosi się na Medium**: 27% wygranych, wobec 4%
+  agenta losowego i 71% skryptowego.
 
 ## Czego nauczyły nas te treningi
 
@@ -42,37 +43,37 @@ Trzy rzeczy, które warto wiedzieć przed czytaniem szczegółów:
    a nagroda nie mówi, że jest zbędny. Zamrożona tablica v4 budowała 38 magazynów na grę.
 3. **Czekanie musi mieć cenę.** Gdy `NO_OP` trwało 1,43 s, jego wartość różniła się od
    najlepszej akcji o 1%, czyli mniej niż szum. Agent uczył się czekać zamiast produkować.
-4. **Im więcej robi warstwa makro, tym silniejszy jest agent losowy.** Po każdej poprawce
-   losowe granie wygrywa częściej, więc przeciw Easy zostaje mniej miejsca na pokazanie
-   uczenia. Przeciw Medium agent losowy nie wygrywa wcale, a skryptowy w 71%.
-5. **Tablicę trzeba oceniać więcej niż jednym sposobem.** Opcja `--explore` w `evaluate`
-   zostawia tablicy jej końcową eksplorację; warto też ocenić kilka checkpointów, a nie
-   tylko ostatni.
+4. **Im więcej robi warstwa makro, tym silniejszy jest agent losowy.** Po kolejnych
+   poprawkach losowe granie wygrywało z Easy 33%, 40% i 61% gier, więc zostaje mniej
+   miejsca na pokazanie uczenia. Przeciw Medium agent losowy prawie nie wygrywa,
+   a skryptowy wygrywa w 71%, więc do porównań modeli Medium nadaje się lepiej.
+5. **Tablicę trzeba oceniać więcej niż jednym sposobem.** Ocena zachłanna jednej
+   zapisanej tablicy dała 53% (v1), 60% (v3) i 23% (v4), choć w treningu wyniki były
+   zbliżone: przy małych różnicach wartości to, którą akcję tablica wskazuje jako
+   najlepszą, zależy od chwili zapisu. Opcja `--explore` w `evaluate` zostawia tablicy
+   jej końcową eksplorację; warto też ocenić kilka checkpointów. W v5 wszystkie te
+   oceny są zgodne (88–96%).
 6. **Nie wolno edytować kodu środowiska w trakcie treningu** (patrz v1).
 
 ## Obecne środowisko
 
 ### Agenci odniesienia
 
-Pomiar na środowisku z uczciwą maską `EXPAND`, jeszcze bez limitu zapasu populacji
-(z nim należy porównywać trening v4). Agent skryptowy to ręcznie napisana kolejność
-budowy, agent losowy wybiera równomiernie spośród dostępnych akcji.
+Agent skryptowy to ręcznie napisana kolejność budowy, agent losowy wybiera równomiernie
+spośród dostępnych akcji.
 
 | Agent | Przeciwnik | W / P / R | Wygrane (95% CI) | Śr. czas gry | Śr. wartość zniszczeń / strat |
 |-------|------------|-----------|------------------|--------------|-------------------------------|
-| skryptowy | VeryEasy | 24 / 0 / 0 | 100% (86–100%) | 5,1 min | 2848 / 75 |
-| skryptowy | Easy | 24 / 0 / 0 | 100% (86–100%) | 5,2 min | 3336 / 231 |
-| skryptowy | Medium | 17 / 7 / 0 | 71% (51–85%) | 8,1 min | 3799 / 3573 |
-| losowy | VeryEasy | 23 / 0 / 1 | 96% (80–99%) | 13,9 min | 7951 / 808 |
-| losowy | Easy | 23 / 18 / 7 | 48% (35–62%) | 17,2 min | 7505 / 7992 |
-| losowy | Medium | 0 / 24 / 0 | 0% (0–14%) | 12,3 min | 1106 / 10123 |
+| skryptowy | VeryEasy | 24 / 0 / 0 | 100% (86–100%) | 5,1 min | 2828 / 75 |
+| skryptowy | Easy | 24 / 0 / 0 | 100% (86–100%) | 5,2 min | 3304 / 225 |
+| skryptowy | Medium | 17 / 7 / 0 | 71% (51–85%) | 7,9 min | 3786 / 3452 |
+| losowy | VeryEasy | 24 / 0 / 0 | 100% (86–100%) | 13,1 min | 7024 / 565 |
+| losowy | Easy | 30 / 15 / 3 | 63% (48–75%) | 15,8 min | 8010 / 5643 |
+| losowy | Medium | 1 / 22 / 1 | 4% (1–20%) | 12,6 min | 2570 / 9404 |
 
-Agent losowy przeciw Easy ma duży rozrzut między seriami: osobna seria 24 gier na tym
-samym kodzie dała 6 wygranych. Łącznie to 29 z 72, czyli 40% (95% CI 30–52%), i tę
-wartość przyjmujemy jako odniesienie dla v4.
-
-Po dodaniu limitu zapasu populacji pierwsza seria 24 gier agenta losowego przeciw Easy
-dała 14 wygranych, 5 przegranych i 5 remisów (58%). Pełny pomiar jest w toku.
+Agent losowy przeciw Easy ma duży rozrzut między seriami, więc zmierzyliśmy go dwa razy.
+Druga seria 24 gier dała 14 wygranych, 5 przegranych i 5 remisów. Łącznie to 44 z 72,
+czyli 61% (95% CI 50–72%), i tę wartość przyjmujemy jako odniesienie dla v5.
 
 Co z tego wynika:
 
@@ -84,7 +85,59 @@ Co z tego wynika:
 
 ### Trening v5: limit zapasu populacji
 
-W toku w chwili zapisu tego dokumentu. Ustawienia jak w v4.
+Ustawienia jak w v4 (`--initial-q 0.5`). To pierwszy trening na środowisku, w którym
+maska nie oferuje ani niewykonalnych ekspansji, ani zbędnych magazynów.
+
+| Gry | W | P | R | Wygrane | Śr. nagroda | Śr. czas gry | Decyzji na grę | Marines na grę | Magazynów na grę | `ATTACK` na grę | Odrzuconych akcji na grę | ε na końcu bloku |
+|-----|---|---|---|---------|-------------|--------------|----------------|----------------|------------------|-----------------|--------------------------|------------------|
+| 1–50 | 28 | 10 | 12 | 56% | +1,343 | 16,4 min | 172 | 154 | 14,2 | 10,8 | 0,1 | 0,87 |
+| 51–100 | 27 | 17 | 6 | 54% | +1,003 | 15,9 min | 169 | 147 | 12,8 | 10,8 | 0,6 | 0,73 |
+| 101–150 | 35 | 9 | 6 | 70% | +1,353 | 14,5 min | 157 | 131 | 12,1 | 9,9 | 0,6 | 0,60 |
+| 151–200 | 41 | 8 | 1 | 82% | +1,481 | 13,3 min | 146 | 120 | 11,3 | 8,8 | 0,6 | 0,46 |
+| 201–250 | 47 | 2 | 1 | 94% | +1,827 | 12,5 min | 135 | 111 | 11,0 | 8,1 | 0,1 | 0,32 |
+| 251–300 | 47 | 1 | 2 | 94% | +1,690 | 10,8 min | 123 | 94 | 8,6 | 6,8 | 0,3 | 0,19 |
+| 301–350 | 47 | 3 | 0 | 94% | +1,631 | 11,0 min | 117 | 86 | 7,1 | 6,8 | 0,0 | 0,05 |
+| 351–400 | 46 | 4 | 0 | 92% | +1,523 | 10,6 min | 121 | 88 | 7,0 | 6,2 | 0,8 | 0,05 |
+| 401–450 | 49 | 0 | 1 | 98% | +1,670 | 9,7 min | 108 | 84 | 6,6 | 5,7 | 0,0 | 0,05 |
+| 451–500 | 46 | 3 | 1 | 92% | +1,522 | 10,3 min | 118 | 90 | 6,6 | 5,9 | 0,5 | 0,05 |
+
+Koszt: 42 minuty czasu rzeczywistego, 6257 minut czasu gry, 68 201 decyzji,
+515 odwiedzonych stanów. Jedna gra (numer 97) padła przy starcie i została automatycznie
+powtórzona; kod nie był w tym czasie zmieniany.
+
+**Co widać w treningu.** Odsetek wygranych rósł razem ze spadkiem eksploracji: od 56%
+w pierwszym bloku do 92–98% w ostatnich czterech. W ostatnich 200 grach przy ε = 0,05
+agent wygrał 188 razy, przegrał 10 i 2 razy zremisował (94%, CI 90–97%),
+wobec 61% agenta losowego (44 z 72, CI 50–72%). Gry skróciły się z 16,4 do około 10 minut,
+a agent z czasem zlecał mniej magazynów i rzadziej przełączał armię między atakiem
+a odwrotem.
+
+**Oceny zapisanej tablicy** (bez uczenia, przeciw Easy, o ile nie podano inaczej):
+
+| Co oceniano | W / P / R | Wygrane (95% CI) |
+|-------------|-----------|------------------|
+| Tablica końcowa, zachłannie | 42 / 6 / 0 na 48 gier | 88% (75–94%) |
+| Tablica końcowa, z eksploracją 5% (`--explore`) | 45 / 3 / 0 na 48 gier | 94% (83–98%) |
+| Checkpoint po 400 grach, zachłannie | 23 / 1 / 0 na 24 gry | 96% (80–99%) |
+| Checkpoint po 450 grach, zachłannie | 23 / 1 / 0 na 24 gry | 96% (80–99%) |
+| Tablica końcowa, zachłannie, **przeciw Medium** | 13 / 35 / 0 na 48 gier | 27% (17–41%) |
+
+W ocenie zachłannej tablica końcowa szkoliła średnio 86 Marines na grę, zlecała
+6,3 magazynu i miała 1,0 odrzuconej akcji na grę, a gra trwała średnio 9,8 minuty.
+Wszystkie cztery oceny przeciw Easy są ze sobą zgodne, inaczej niż w v4. Przeciw Medium
+tablica wygrywa częściej niż agent losowy (4%), ale dużo rzadziej niż skryptowy (71%):
+nigdy nie grała z tym przeciwnikiem.
+
+**Czego tablica się nauczyła.** Najczęściej odwiedzane stany mają czytelne preferencje:
+
+| Stan | Najwyżej ceniona akcja | Najniżej ceniona akcja (z wypróbowanych co najmniej 20 razy) |
+|------|------------------------|------------------------|
+| 30 lub więcej Marines, armia w obronie, baza bezpieczna | `ATTACK` (0,85) | `TRAIN_SCV` (0,69) |
+| 30 lub więcej Marines, armia w ataku | `TRAIN_MARINE` (0,91) | `RETREAT` (0,71) |
+| 16–30 Marines, armia w ataku | `TRAIN_MARINE` (0,80) | `RETREAT` (0,65) |
+
+Czyli: atakuj dużą armią, w trakcie ataku dalej produkuj i nie wycofuj się. Tabelę
+z własnej tablicy wydrukuje kod z [model-a-q-learning.md](model-a-q-learning.md#plik-tablicy).
 
 ## Historia: jak doszliśmy do obecnego środowiska
 
@@ -234,6 +287,20 @@ z około 110 do 154.
 
 ### Agenci odniesienia na wcześniejszych wersjach środowiska
 
+Do porównań z v4 (uczciwa maska `EXPAND`, jeszcze bez limitu zapasu populacji):
+
+| Agent | Przeciwnik | W / P / R | Wygrane (95% CI) |
+|-------|------------|-----------|------------------|
+| skryptowy | VeryEasy | 24 / 0 / 0 | 100% (86–100%) |
+| skryptowy | Easy | 24 / 0 / 0 | 100% (86–100%) |
+| skryptowy | Medium | 17 / 7 / 0 | 71% (51–85%) |
+| losowy | VeryEasy | 23 / 0 / 1 | 96% (80–99%) |
+| losowy | Easy | 23 / 18 / 7 | 48% (35–62%) |
+| losowy | Medium | 0 / 24 / 0 | 0% (0–14%) |
+
+Osobna seria 24 gier agenta losowego przeciw Easy na tym samym kodzie dała 6 wygranych.
+Łącznie to 29 z 72, czyli 40% (95% CI 30–52%).
+
 Do porównań z v2 (po zmianie punktów decyzyjnych, przed rezerwacją minerałów):
 
 | Agent | Przeciwnik | W / P / R | Wygrane (95% CI) |
@@ -263,8 +330,9 @@ Dla v1 odniesieniem jest początek samego treningu, gdy akcje były niemal losow
 
 | Pomiar | Wartość |
 |--------|---------|
-| Jedna gra, 5 minut czasu gry, maszyna bez obciążenia | 10,8 s łącznie ze startem gry |
-| Trening v4, 12 gier naraz | 11 ukończonych gier na minutę, czyli około 168 minut gry na minutę czasu rzeczywistego |
+| Jedna gra agenta skryptowego, 5,5 minuty czasu gry, maszyna bez obciążenia | 12 s łącznie ze startem gry |
+| Trening v4, 12 gier naraz | 500 gier w 45,5 minuty: 11 gier na minutę, około 168 minut gry na minutę czasu rzeczywistego |
+| Trening v5, 12 gier naraz | 500 gier w 42 minuty: 12 gier na minutę (gry są krótsze, bo agent szybciej wygrywa) |
 | Obciążenie przy 12 grach naraz | 12–18 rdzeni, 6–9,5 GB pamięci |
 | Testy jednostkowe | kilka sekund |
 | Testy integracyjne (7 testów z prawdziwą grą) | 40–80 s zależnie od obciążenia |

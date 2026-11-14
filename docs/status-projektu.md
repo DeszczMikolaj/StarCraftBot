@@ -1,6 +1,6 @@
 # Status projektu względem założeń
 
-Stan na 13 listopada 2026. Odnosi się do dwóch dokumentów zespołu: wstępnych założeń
+Stan na 14 listopada 2026. Odnosi się do dwóch dokumentów zespołu: wstępnych założeń
 projektu („Porównanie trzech podejść do uczenia agentów gry StarCraft II") oraz
 podsumowania etapu 1 po rozmowie z prowadzącym.
 
@@ -11,7 +11,7 @@ podsumowania etapu 1 po rozmowie z prowadzącym.
 | Repozytorium z `requirements.txt` obejmującym python-sc2 i PyTorch | Zrobione. `pip` poprawnie rozwiązuje plik (`--dry-run` na Windows); pełnej instalacji przez `pip` nie wykonywaliśmy, bo na co dzień używamy `uv`. | `requirements.txt` (generowany z `uv.lock`), `pyproject.toml` |
 | Środowisko uruchamia grę bez interfejsu graficznego | Zrobione i sprawdzone | Obraz Dockera z linuksowym SC2 4.10, [runbook 01](../runbooks/01-srodowisko-docker.md) |
 | Klasa środowiska: w każdej klatce decyzyjnej zwraca wektor obserwacji i przyjmuje jedną dyskretną akcję makro (Terran vs Terran) | Zrobione i sprawdzone | `SC2MacroEnv`, [srodowisko.md](srodowisko.md) |
-| Klasyczny Q-Learning uruchomiony w grze, podejmuje akcje na podstawie tablicy Q | Zrobione i sprawdzone | `agents/qlearning.py`, [model-a-q-learning.md](model-a-q-learning.md) |
+| Klasyczny Q-Learning uruchomiony w grze, podejmuje akcje na podstawie tablicy Q | Zrobione i sprawdzone. Po 500 grach treningowych wygrywa z Easy 88% gier (agent losowy 61%). | `agents/qlearning.py`, [model-a-q-learning.md](model-a-q-learning.md), [wyniki.md](wyniki.md) |
 | Logowanie poprawnych odczytów z gry | Zrobione i sprawdzone | `scbot.play` (na ekran), `steps.jsonl`, `episodes.csv`, TensorBoard |
 
 „Sprawdzone" oznacza: przechodzi testy integracyjne z prawdziwą grą i zostało uruchomione

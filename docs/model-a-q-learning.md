@@ -4,6 +4,13 @@ Punkt odniesienia dla modeli z sieciami neuronowymi. Nie ma tu sieci: wartości 
 zapisane w tablicy, a ciągła obserwacja jest najpierw sprowadzana do niewielkiej liczby
 dyskretnych stanów. Kod: `src/scbot/agents/qlearning.py`.
 
+## Wynik w jednym akapicie
+
+Po 500 grach treningowych przeciw Easy (42 minuty) tablica wygrywa z Easy 88% gier
+w ocenie zachłannej i 94% z eksploracją 5%, wobec 61% agenta losowego i 100% agenta
+skryptowego. Przeciw Medium, z którym nie trenowała, wygrywa 27% (losowy 4%, skryptowy
+71%). Pełne dane i historia dojścia do tego wyniku: [wyniki.md](wyniki.md).
+
 ## Algorytm
 
 Po każdej decyzji agent dostaje przejście (stan `s`, akcja `a`, nagroda `r`, następny
@@ -41,7 +48,7 @@ to krotka numerów koszyków (`DEFAULT_BINS`).
 | `townhalls` | 2 | 2 | Jedna baza albo więcej |
 
 Razem 5 · 3 · 3 · 4 · 5 · 2 · 2 · 2 = **7200 stanów** po 8 akcji. W praktyce odwiedzana
-jest niewielka część: po 500 grach treningowych w tablicy były 932 stany.
+jest niewielka część: po 500 grach treningu v5 w tablicy było 515 stanów.
 
 Wartość dokładnie równa progowi trafia do wyższego koszyka (50 minerałów to już koszyk
 „stać na SCV"). Obserwacja jest typu `float32`, więc przed porównaniem z progiem wartości
@@ -146,9 +153,10 @@ gra z tym samym ε.
   ([srodowisko.md](srodowisko.md#punkty-decyzyjne)); pomiary są w [wyniki.md](wyniki.md).
 - **Niestabilna polityka zachłanna.** Wartości akcji w jednym stanie różnią się o kilka
   procent, a szum estymacji jest podobnej wielkości. To, którą akcję tablica wskazuje
-  jako najlepszą, zależy więc od chwili zapisu. Ocena zachłanna kolejnych tablic dała
-  53%, 60% i 23% wygranych, choć w trakcie treningu wyniki były zbliżone. Tablicę
-  oceniaj też z `--explore` i na kilku checkpointach.
+  jako najlepszą, zależy więc od chwili zapisu. Na wcześniejszych wersjach środowiska
+  ocena zachłanna kolejnych tablic dała 53%, 60% i 23% wygranych, choć w trakcie
+  treningu wyniki były zbliżone. W v5 oceny są zgodne (88–96%), ale tablicę nadal warto
+  oceniać też z `--explore` i na kilku checkpointach.
 - **Wrażliwość na „darmowe" akcje.** Akcja, która nic nie kosztuje (odrzucana przez
   środowisko albo po prostu zbędna), nie dostaje niższej wartości i bywa nadużywana.
   Takie akcje trzeba usuwać w masce, bo tablica sama ich nie odróżni.

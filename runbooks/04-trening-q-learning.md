@@ -17,18 +17,17 @@ Opis algorytmu, dyskretyzacji stanu i formatu tablicy jest w
 docker compose run --rm sc2 python -m scbot.train_q --run-name q_baseline --difficulty Easy --episodes 500 --epsilon-decay-episodes 350 --initial-q 0.5 --num-envs 12
 ```
 
-To ustawienia treningu v4 z [docs/wyniki.md](../docs/wyniki.md). Trening od razu zaczyna
+To ustawienia treningu v5 z [docs/wyniki.md](../docs/wyniki.md). Trening od razu zaczyna
 grać. Pierwszy wiersz potwierdza ustawienia, kolejne to ukończone gry (przykład
-z treningu `q_easy_v4`):
+z treningu `q_easy_v5`):
 
 ```text
-run: runs/q_easy_v4 | map=Simple64 opponent=Easy | state space: 7200 states | decision interval 1.43 s of game time | 12 game(s) in parallel
-ep    1/500 Defeat  return=-1.264 eps=1.00 game=19.5min wall= 102s marines=114 states= 275 win1=0%
-ep    2/500 Victory return=+2.079 eps=1.00 game=12.6min wall=  70s marines=128 states= 275 win2=50%
-ep    3/500 Victory return=+2.255 eps=0.99 game=15.9min wall=  88s marines=146 states= 275 win3=67%
+run: runs/q_easy_v5 | map=Simple64 opponent=Easy | state space: 7200 states | decision interval 1.43 s of game time | 12 game(s) in parallel
+ep    1/500 Victory return=+2.315 eps=1.00 game=16.8min wall=  82s marines=171 states= 161 win1=100%
+ep    2/500 Victory return=+2.360 eps=1.00 game=15.3min wall=  86s marines=156 states= 168 win2=100%
 ...
-ep  500/500 Victory return=+1.907 eps=0.05 game=13.3min wall=  33s marines= 88 states= 727 win20=55%
-done: 500 episodes finished, 727 states visited, table: runs/q_easy_v4/qtable.npz
+ep  500/500 Victory return=+1.782 eps=0.05 game=11.7min wall=  34s marines=123 states= 515 win20=95%
+done: 500 episodes finished, 515 states visited, table: runs/q_easy_v5/qtable.npz
 ```
 
 | Pole | Znaczenie |
@@ -66,7 +65,7 @@ są takie same jak w `scbot.play`. Pełna lista: `python -m scbot.train_q --help
 
 **Ile gier naraz.** Jedna gra zajmuje około 1,5 rdzenia i 0,5–0,8 GB pamięci. Na maszynie
 z 24 wątkami i 16 GB dla Dockera 12 gier naraz dawało około 11 ukończonych gier na
-minutę, czyli 500 gier w 45 minut. Zacznij od liczby rdzeni fizycznych podzielonej przez 1,5.
+minutę, czyli 500 gier w 42–46 minut. Zacznij od liczby rdzeni fizycznych podzielonej przez 1,5.
 
 ### 3. Podglądaj postęp
 
@@ -147,11 +146,31 @@ treningu, rób to w osobnej kopii repozytorium (`git worktree`).
 ## Czego się spodziewać
 
 Wyniki dotychczasowych treningów, razem z czasem trwania, są w
-[docs/wyniki.md](../docs/wyniki.md). W skrócie:
+[docs/wyniki.md](../docs/wyniki.md). Tak wyglądał trening v5 w `scbot.report`:
+
+```text
+runs\q_easy_v5: 500 episodes
+   episodes   W   L   T  win%  return game min decisions NO_OP% marines epsilon
+    1-50     28  10  12   56%  +1.343     16.4       172    40%     154    0.87
+   51-100    27  17   6   54%  +1.003     15.9       169    39%     147    0.73
+  101-150    35   9   6   70%  +1.353     14.5       157    37%     131    0.60
+  151-200    41   8   1   82%  +1.481     13.3       146    36%     120    0.46
+  201-250    47   2   1   94%  +1.827     12.5       135    36%     111    0.32
+  251-300    47   1   2   94%  +1.690     10.8       123    34%      94    0.19
+  301-350    47   3   0   94%  +1.631     11.0       117    34%      86    0.05
+  351-400    46   4   0   92%  +1.523     10.6       121    32%      88    0.05
+  401-450    49   0   1   98%  +1.670      9.7       108    32%      84    0.05
+  451-500    46   3   1   92%  +1.522     10.3       118    34%      90    0.05
+```
+
+Na co zwracać uwagę:
 
 - W początkowej fazie (epsilon bliski 1) agent gra niemal losowo i odsetek wygranych
   odpowiada agentowi losowemu. Poprawa pojawia się, gdy epsilon wyraźnie spadnie.
 - Wynik w blokach po 50 gier waha się o kilkanaście punktów procentowych. Oceniaj trend
   z kilku bloków, nie pojedynczy blok.
-- Wynik z końcówki treningu i ocena zachłanna zapisanej tablicy mogą się bardzo
-  różnić. Po treningu oceń tablicę oboma sposobami z [runbooka 05](05-ewaluacja-i-powtorki.md).
+- Wynik z końcówki treningu i ocena zachłanna zapisanej tablicy mogą się różnić
+  (w v4 bardzo, w v5 nieznacznie). Po treningu oceń tablicę oboma sposobami
+  z [runbooka 05](05-ewaluacja-i-powtorki.md).
+- Zmiana w środowisku unieważnia porównanie z wcześniejszymi treningami. Po każdej
+  takiej zmianie zmierz na nowo także agenta losowego i skryptowego.
