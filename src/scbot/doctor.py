@@ -22,6 +22,13 @@ from scbot.config import EnvConfig
 
 OK, WARN, FAIL = "ok", "warn", "FAIL"
 
+# Seen on a fresh Windows installation: the client spends its first starts downloading
+# data and does not open the API port until it is done.
+FIRST_START_HINT = (
+    ". If the game shows a 'Preparing game data' window, it is still downloading data:"
+    " run this command again (the download resumes) until the game starts."
+)
+
 
 class Report:
     def __init__(self) -> None:
@@ -69,17 +76,22 @@ def check_packages(report: Report) -> None:
         report.add(FAIL, "torch", f"cannot import: {error}")
 
 
-def find_sc2_base() -> Path:
-    """Where python-sc2 will look for the game (same rules as ``sc2.paths``)."""
+def find_sc2_base() -> tuple[Path, str]:
+    """Where python-sc2 will look for the game (same rules as ``sc2.paths``), and why."""
     from sc2 import paths
 
-    base = os.environ.get("SC2PATH") or paths.get_user_sc2_install() or paths.BASEDIR[paths.PF]
-    return Path(base).expanduser()
+    if os.environ.get("SC2PATH"):
+        base, source = os.environ["SC2PATH"], "SC2PATH"
+    elif (recorded := paths.get_user_sc2_install()) is not None:
+        # Windows and macOS: the game writes its own location there when it starts.
+        base, source = recorded, "ExecuteInfo.txt"
+    else:
+        base, source = paths.BASEDIR[paths.PF], "default location"
+    return Path(base).expanduser(), source
 
 
 def check_game(report: Report, map_name: str) -> bool:
-    base = find_sc2_base()
-    source = "SC2PATH" if os.environ.get("SC2PATH") else "default location"
+    base, source = find_sc2_base()
     versions = base / "Versions"
     if not versions.is_dir():
         report.add(
@@ -118,7 +130,7 @@ def installed_maps(base: Path) -> dict[str, Path]:
 
 
 def list_maps() -> None:
-    base = find_sc2_base()
+    base, _ = find_sc2_base()
     maps = installed_maps(base)
     if not maps:
         raise SystemExit(f"no maps found under {maps_directory(base)}")
@@ -149,7 +161,10 @@ def check_launch(report: Report, map_name: str) -> None:
             f"minerals={raw['minerals']:g}, workers={raw['workers']:g}",
         )
     except Exception as error:
-        report.add(FAIL, "game launch", str(error))
+        detail = str(error)
+        if os.name == "nt" and "did not answer" in detail:
+            detail += FIRST_START_HINT
+        report.add(FAIL, "game launch", detail)
     finally:
         env.close()
 

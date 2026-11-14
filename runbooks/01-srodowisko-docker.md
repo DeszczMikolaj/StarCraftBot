@@ -112,5 +112,5 @@ je ponownie.
 - Kontener działa jako `root`. Na Windows nie ma to znaczenia. Na Linuksie pliki zapisane
   do `runs/` i `replays/` będą należały do roota.
 - Wersja linuksowa gry to 4.10 (ostatnia wydana przez Blizzarda). Klient Windows jest
-  nowszy, więc balans jednostek może się różnić. Trenuj i oceniaj modele na jednej
-  platformie.
+  nowszy (5.0.17 w dniu sprawdzenia), więc balans jednostek może się różnić. Trenuj
+  i oceniaj modele na jednej platformie.

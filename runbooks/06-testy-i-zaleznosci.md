@@ -17,6 +17,13 @@ zainstalowana. W Dockerze trwają około 40 sekund:
 docker compose run --rm sc2 pytest -m sc2
 ```
 
+Te same testy działają na kliencie Windows z [runbooka 02](02-klient-windows.md). Trwają
+tam około 80 sekund i otwierają okna gry:
+
+```bash
+uv run pytest -m sc2
+```
+
 | Plik | Co sprawdza |
 |------|-------------|
 | `tests/test_observation.py` | Skalowanie i obcinanie wektora obserwacji, odwracalność. |

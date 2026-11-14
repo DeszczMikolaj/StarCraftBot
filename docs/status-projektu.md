@@ -54,7 +54,9 @@ Ich autorzy mogą je zmieniać w granicach opisanych w [rozwijanie.md](rozwijani
   tylko dla miejsca po naszej stronie mapy, na którym da się budować, a magazyn tylko
   wtedy, gdy zapas populacji jest poniżej 16. Uzasadnienie i pomiary są
   w [wyniki.md](wyniki.md).
-- **Wersja gry.** Headless działa na linuksowej wersji 4.10, starszej niż klient Windows.
+- **Wersja gry.** Headless działa na linuksowej wersji 4.10, starszej niż klient Windows
+  (5.0.17). Te same skrypty i testy integracyjne działają na obu
+  ([runbook 02](../runbooks/02-klient-windows.md)), ale pomiary robimy tylko w kontenerze.
 - **Brak gazu.** Bot nie buduje rafinerii ani jednostek innych niż Marine. Rozszerzenie
   listy akcji jest opisane w [rozwijanie.md](rozwijanie.md).
 
@@ -68,4 +70,4 @@ Ich autorzy mogą je zmieniać w granicach opisanych w [rozwijanie.md](rozwijani
 | Statystyki zachowania i efektywność walki | Częściowo: `episodes.csv` i wyniki `evaluate` zawierają liczbę baz, SCV, koszar, Marines, wartość zniszczeń i strat. |
 | Koszt uczenia (GPU-godziny, liczba gier) | Liczba gier i czas są w `episodes.csv`. Model A nie używa GPU. |
 | Uzgodniony wspólny budżet obliczeniowy | Do ustalenia. Pomiary wydajności są w [wyniki.md](wyniki.md). |
-| Ścieżka z klientem Windows | Opisana w [runbooku 02](../runbooks/02-klient-windows.md), nie sprawdzona. |
+| Oglądanie powtórek w kliencie Windows | Sama ścieżka z klientem Windows jest sprawdzona ([runbook 02](../runbooks/02-klient-windows.md)): gra na żywo, tryb `--realtime`, testy integracyjne. Otwierania plików `.SC2Replay` w kliencie nie sprawdziliśmy. |

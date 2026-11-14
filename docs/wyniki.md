@@ -2,7 +2,8 @@
 
 Stan na 14 listopada 2026. Wszystko zmierzone w kontenerze z linuksowym StarCraft II 4.10,
 na mapie `Simple64`, przeciw wbudowanej SI grającej Terranami. Maszyna: i7-13700F
-(24 wątki), 32 GB RAM, z czego 16 GB dla Dockera.
+(24 wątki), 32 GB RAM, z czego 16 GB dla Dockera. Jedyny wyjątek to oznaczona
+[kontrola na kliencie Windows](#kontrola-na-kliencie-windows).
 
 Surowe dane leżą w `runs/` (poza Gitem). Każdą tabelę da się odtworzyć komendami
 z [runbooka 04](../runbooks/04-trening-q-learning.md) i [05](../runbooks/05-ewaluacja-i-powtorki.md).
@@ -138,6 +139,21 @@ nigdy nie grała z tym przeciwnikiem.
 
 Czyli: atakuj dużą armią, w trakcie ataku dalej produkuj i nie wycofuj się. Tabelę
 z własnej tablicy wydrukuje kod z [model-a-q-learning.md](model-a-q-learning.md#plik-tablicy).
+
+### Kontrola na kliencie Windows
+
+Jedyny pomiar spoza kontenera. Tablica v5, wytrenowana w kontenerze na grze 4.10, zagrała
+10 gier przeciw Easy na kliencie Windows z grą 5.0.17 (ocena zachłanna, dwie gry naraz,
+[runbook 02](../runbooks/02-klient-windows.md)):
+
+| Co oceniano | W / P / R | Wygrane (95% CI) | Śr. czas gry | Śr. wartość zniszczeń / strat |
+|-------------|-----------|------------------|--------------|-------------------------------|
+| Tablica końcowa v5, zachłannie, klient Windows | 8 / 2 / 0 na 10 gier | 80% (49–94%) | 10,1 min | 4610 / 4300 |
+
+Tablica wczytuje się i gra na nowszej wersji bez zmian w kodzie, a wynik nie odbiega od
+oceny z kontenera (88%, CI 75–94%). Dziesięć gier to za mało, żeby porównywać platformy:
+to kontrola działania, a nie pomiar. Wszystkie wyniki do porównań modeli robimy
+w kontenerze.
 
 ## Historia: jak doszliśmy do obecnego środowiska
 

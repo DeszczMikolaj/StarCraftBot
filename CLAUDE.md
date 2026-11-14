@@ -27,6 +27,10 @@ docker compose run --rm sc2 python -m scbot.evaluate --agent q --model runs/NAME
 Source is bind-mounted into the container: rebuild the image (`docker compose build sc2`)
 only after changing `pyproject.toml`, `uv.lock` or `docker/`.
 
+The same entry points also run against an installed Windows client (game 5.0.17, opens a
+window per game): `uv run python -m scbot.play ...`, `uv run pytest -m sc2`. Use it to
+watch a game; measure in the container. See `runbooks/02-klient-windows.md`.
+
 ## Rules that are easy to break
 
 - The observation vector (`env/observation.py: FEATURES`) and the action list
@@ -46,7 +50,8 @@ only after changing `pyproject.toml`, `uv.lock` or `docker/`.
   are on disk at that moment, so part of the run would use different code. Wait for the
   run to finish or work in a separate `git worktree`.
 - Keep the runbooks truthful: when a documented command or its output changes, re-run it
-  and update the runbook. `runbooks/02-klient-windows.md` is explicitly unverified.
+  and update the runbook. In `runbooks/02-klient-windows.md` only watching replays in the
+  client is unverified.
 - `docs/przewodnik-po-kodzie.md` links to exact line ranges. After moving code, run
   `uv run pytest tests/test_docs_links.py` and fix the ranges it reports; also re-read
   the numeric ranges of the file you changed, because the test can only verify links

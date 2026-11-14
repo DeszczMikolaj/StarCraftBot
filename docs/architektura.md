@@ -170,8 +170,8 @@ wykonuje.
   jeszcze nie.
 - Każda gra startuje StarCraft II od nowa (kilka sekund). python-sc2 pozwala utrzymać
   proces gry między meczami, co skróciłoby krótkie epizody.
-- Wersja linuksowa gry to 4.10, klient Windows jest nowszy. Wyniki z obu platform nie są
-  wprost porównywalne.
+- Wersja linuksowa gry to 4.10, klient Windows jest nowszy (5.0.17). Kod działa na obu,
+  ale wyniki z obu platform nie są wprost porównywalne.
 - Gra, w której żadna strona nie zniszczy wszystkich budynków przeciwnika w 20 minut,
   kończy się remisem. Nie sprawdzaliśmy jeszcze, jaka część remisów to gry w praktyce
   rozstrzygnięte, w których przeciwnikowi zostały pojedyncze budynki.

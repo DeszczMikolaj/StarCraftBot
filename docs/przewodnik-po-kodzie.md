@@ -464,7 +464,7 @@ opisane wyżej.
 |------|----------|-----------------------|
 | [`evaluate.py`](../src/scbot/evaluate.py) | Seria gier bez uczenia i podsumowanie z przedziałem ufności | [`main`](../src/scbot/evaluate.py#L28) używa tej samej pętli co trening, z `learn=False` |
 | [`report.py`](../src/scbot/report.py) | Tabela z przebiegu treningu w blokach gier | [`summarise_blocks`](../src/scbot/report.py#L24) |
-| [`doctor.py`](../src/scbot/doctor.py) | Diagnostyka środowiska | [`check_game`](../src/scbot/doctor.py#L80) i [`check_launch`](../src/scbot/doctor.py#L129) |
+| [`doctor.py`](../src/scbot/doctor.py) | Diagnostyka środowiska | [`check_game`](../src/scbot/doctor.py#L93) i [`check_launch`](../src/scbot/doctor.py#L141) |
 
 ## Testy jako dokumentacja
 
