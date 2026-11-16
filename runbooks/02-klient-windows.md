@@ -1,12 +1,10 @@
 # 02. Klient Windows
 
 **Cel:** uruchamiać te same skrypty na zwykłym kliencie gry w Windows, żeby oglądać bota
-na żywo.
+na żywo i odtwarzać powtórki.
 
-> **Stan weryfikacji:** kroki 1–6 zostały przećwiczone 14 listopada 2026 na świeżej
-> instalacji gry (wersja 5.0.17, katalog `C:\StarCraft II`, Windows 10). Nie sprawdziliśmy
-> tylko oglądania powtórek w kliencie; jest to zaznaczone w sekcji
-> [Powtórki](#powtórki).
+> **Stan weryfikacji:** cały runbook został przećwiczony 14–16 listopada 2026 na świeżej
+> instalacji gry (wersja 5.0.17, katalog `C:\StarCraft II`, Windows 10).
 
 Klient Windows zawsze otwiera okno gry, więc nie zastępuje środowiska headless z
 [runbooka 01](01-srodowisko-docker.md). Służy do podglądu.
@@ -161,12 +159,24 @@ uv run pytest -m sc2
 
 ## Powtórki
 
-- Opcja `--replay` działa na Windows tak samo jak w kontenerze. Plik powstaje w wersji
-  klienta Windows.
-- **Nie sprawdziliśmy oglądania powtórek w kliencie.** Pliki `.SC2Replay` powinny otwierać
-  się dwuklikiem. Powtórki zapisane przez kontener (np. `runs/<nazwa>/replays/`) pochodzą
-  z wersji 4.10, więc klient może najpierw pobrać dane tej wersji.
-- Sprawdzonym sposobem obejrzenia wytrenowanego agenta jest gra na żywo z krokiem 6.
+Pliki `.SC2Replay` otwiera się dwuklikiem. Sprawdzone 16 listopada 2026 dla obu rodzajów
+plików:
+
+- **Powtórka zapisana na Windows** (opcja `--replay` działa tak samo jak w kontenerze, plik
+  powstaje w wersji klienta). Dwuklik uruchamia pełnego klienta gry na całym ekranie. Przy
+  pierwszym otwarciu klient poprosił o zalogowanie do Battle.net, po czym powtórka
+  odtworzyła się sama.
+- **Powtórka zapisana przez kontener** (np. `runs/<nazwa>/replays/`, gra w wersji 4.10).
+  Klient sam pobrał starszą wersję gry (katalog `Versions\Base75689`, katalog gry urósł
+  z 25,8 do 26,1 GB), uruchomił się w niej ponownie i odtworzył powtórkę. Od dwukliku do
+  początku odtwarzania minęła u nas około minuta.
+
+Po obejrzeniu powtórki z kontenera diagnostyka wypisuje dwie wersje
+(`builds: Base75689, Base98310`). Skrypty nadal uruchamiają najnowszą.
+
+Panel po prawej stronie okna powtórki pokazuje czas i pozwala ją zatrzymać, cofnąć
+i zmienić prędkość. Żeby zobaczyć agenta w akcji bez zapisywania powtórki, użyj gry na
+żywo z kroku 6.
 
 ## Uwagi
 

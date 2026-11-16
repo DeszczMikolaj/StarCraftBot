@@ -1,6 +1,6 @@
 # Status projektu względem założeń
 
-Stan na 14 listopada 2026. Odnosi się do dwóch dokumentów zespołu: wstępnych założeń
+Stan na 16 listopada 2026. Odnosi się do dwóch dokumentów zespołu: wstępnych założeń
 projektu („Porównanie trzech podejść do uczenia agentów gry StarCraft II") oraz
 podsumowania etapu 1 po rozmowie z prowadzącym.
 
@@ -55,8 +55,9 @@ Ich autorzy mogą je zmieniać w granicach opisanych w [rozwijanie.md](rozwijani
   wtedy, gdy zapas populacji jest poniżej 16. Uzasadnienie i pomiary są
   w [wyniki.md](wyniki.md).
 - **Wersja gry.** Headless działa na linuksowej wersji 4.10, starszej niż klient Windows
-  (5.0.17). Te same skrypty i testy integracyjne działają na obu
-  ([runbook 02](../runbooks/02-klient-windows.md)), ale pomiary robimy tylko w kontenerze.
+  (5.0.17). Te same skrypty i testy integracyjne działają na obu, a klient Windows
+  odtwarza też powtórki z kontenera ([runbook 02](../runbooks/02-klient-windows.md)).
+  Pomiary robimy tylko w kontenerze.
 - **Brak gazu.** Bot nie buduje rafinerii ani jednostek innych niż Marine. Rozszerzenie
   listy akcji jest opisane w [rozwijanie.md](rozwijanie.md).
 
@@ -70,4 +71,3 @@ Ich autorzy mogą je zmieniać w granicach opisanych w [rozwijanie.md](rozwijani
 | Statystyki zachowania i efektywność walki | Częściowo: `episodes.csv` i wyniki `evaluate` zawierają liczbę baz, SCV, koszar, Marines, wartość zniszczeń i strat. |
 | Koszt uczenia (GPU-godziny, liczba gier) | Liczba gier i czas są w `episodes.csv`. Model A nie używa GPU. |
 | Uzgodniony wspólny budżet obliczeniowy | Do ustalenia. Pomiary wydajności są w [wyniki.md](wyniki.md). |
-| Oglądanie powtórek w kliencie Windows | Sama ścieżka z klientem Windows jest sprawdzona ([runbook 02](../runbooks/02-klient-windows.md)): gra na żywo, tryb `--realtime`, testy integracyjne. Otwierania plików `.SC2Replay` w kliencie nie sprawdziliśmy. |

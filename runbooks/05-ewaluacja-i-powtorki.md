@@ -71,8 +71,9 @@ docker compose run --rm sc2 python -m scbot.play --agent scripted --replay repla
 
 Trening zapisuje powtórkę co 50. grę do `runs/<nazwa>/replays/` (opcja `--replay-every`).
 
-Powtórki ogląda się w kliencie Windows, patrz [runbook 02](02-klient-windows.md). Wersja
-linuksowa gry nie ma interfejsu graficznego.
+Powtórki ogląda się w kliencie Windows: dwuklik na pliku wystarcza, także dla powtórek
+z kontenera ([runbook 02](02-klient-windows.md#powtórki)). Wersja linuksowa gry nie ma
+interfejsu graficznego.
 
 ## Weryfikacja
 

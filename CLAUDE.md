@@ -50,8 +50,7 @@ watch a game; measure in the container. See `runbooks/02-klient-windows.md`.
   are on disk at that moment, so part of the run would use different code. Wait for the
   run to finish or work in a separate `git worktree`.
 - Keep the runbooks truthful: when a documented command or its output changes, re-run it
-  and update the runbook. In `runbooks/02-klient-windows.md` only watching replays in the
-  client is unverified.
+  and update the runbook. No runbook is marked as unverified any more; keep it that way.
 - `docs/przewodnik-po-kodzie.md` links to exact line ranges. After moving code, run
   `uv run pytest tests/test_docs_links.py` and fix the ranges it reports; also re-read
   the numeric ranges of the file you changed, because the test can only verify links
