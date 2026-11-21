@@ -15,6 +15,7 @@ uzasadnienie:
 | Co zmierzyliśmy i czego się nauczyliśmy | [wyniki.md](wyniki.md) |
 | Jak dodać agenta, cechę, akcję | [rozwijanie.md](rozwijanie.md) |
 | Co wpisać, żeby coś uruchomić | [runbooki](../runbooks/README.md) |
+| Jak czytać typy w Pythonie, z odpowiednikami z Javy | [runbook 06](../runbooks/06-testy-i-zaleznosci.md#typy) |
 
 ## Jak korzystać z przewodnika
 
@@ -23,8 +24,11 @@ uzasadnienie:
 2. Idź przystankami po kolei. Każdy to jeden plik: po co jest, co dzieje się w kolejnych
    liniach i dlaczego, oraz jedno ćwiczenie „sprawdź sam".
 3. Odnośniki prowadzą do konkretnych linii. Test `tests/test_docs_links.py` sprawdza, że
-   każdy z nich nadal wskazuje kod, o którym mówi, więc po zmianach w kodzie przewodnik
-   nie rozjedzie się po cichu.
+   odnośnik podpisany nazwą funkcji lub klasy nadal wskazuje jej kod, więc po zmianach
+   w kodzie przewodnik nie rozjedzie się po cichu. Odnośników podpisanych opisem („koniec
+   gry") test nie umie sprawdzić po treści.
+4. Każda funkcja ma typy parametrów i wyniku, a mypy je sprawdza. Najedź w edytorze na
+   nazwę, żeby zobaczyć jej typ.
 
 Komenda, do której będziemy wracać (jedna gra z wypisywaniem odczytów):
 
@@ -60,7 +64,7 @@ Zaczynamy w chwili, gdy agent właśnie dostał obserwację.
 
 | Krok | Gdzie | Co się dzieje |
 |------|-------|---------------|
-| 1 | [wybór akcji](../src/scbot/runner.py#L143-L144) | Pętla epizodów pyta agenta o akcję (`agent.act`) i wysyła ją do środowiska (`step_async`). |
+| 1 | [wybór akcji](../src/scbot/runner.py#L161-L162) | Pętla epizodów pyta agenta o akcję (`agent.act`) i wysyła ją do środowiska (`step_async`). |
 | 2 | [`step_async`](../src/scbot/env/sc2_env.py#L119-L129) | Środowisko sprawdza akcję i wkłada do potoku komunikat `("action", n)`. |
 | 3 | [`PipeBridge.decide`](../src/scbot/env/worker.py#L38-L43) | W procesie gry bot czekał na `recv()`. Dostaje numer akcji. |
 | 4 | [wykonanie akcji](../src/scbot/env/bot.py#L127-L135) | Bot zamienia numer na `MacroAction`, zapamiętuje chwilę decyzji i każe warstwie makro wykonać akcję. |
@@ -71,8 +75,8 @@ Zaczynamy w chwili, gdy agent właśnie dostał obserwację.
 | 9 | [`_decide`](../src/scbot/env/bot.py#L109-L126) | Jeśli tak: liczy nagrodę od poprzedniej decyzji, czyta stan gry, pakuje wszystko w `StepData`. |
 | 10 | [`PipeBridge.decide`](../src/scbot/env/worker.py#L38-L43) | `StepData` idzie potokiem do procesu głównego, a bot znów czeka na akcję. |
 | 11 | [`collect`](../src/scbot/env/sc2_env.py#L142-L157) | Środowisko odbiera odpowiedź i oddaje ją jako wynik `step()`. |
-| 12 | [odbiór odpowiedzi](../src/scbot/runner.py#L103-L124) | Pętla epizodów przekazuje przejście agentowi (`agent.observe`). |
-| 13 | [`observe`](../src/scbot/agents/qlearning.py#L175-L202) | Q-Learning poprawia jedną komórkę tablicy. Wracamy do kroku 1. |
+| 12 | [odbiór odpowiedzi](../src/scbot/runner.py#L121-L142) | Pętla epizodów przekazuje przejście agentowi (`agent.observe`). |
+| 13 | [`observe`](../src/scbot/agents/qlearning.py#L176-L203) | Q-Learning poprawia jedną komórkę tablicy. Wracamy do kroku 1. |
 
 Między krokiem 7 a 9 może minąć od 1,43 s do 60 s czasu gry. Dlaczego nie jest to stały
 odstęp, wyjaśnia [srodowisko.md](srodowisko.md#punkty-decyzyjne).
@@ -122,27 +126,33 @@ i `RETREAT`. Potem cofnij zmianę.
 Plik: [`runner.py`](../src/scbot/runner.py). To tutaj spotykają się agent i środowisko.
 Cała nauka i wszystkie decyzje dzieją się w tym jednym procesie.
 
+Pętla nie wymaga konkretnej klasy środowiska, tylko pięciu metod opisanych w
+[`AsyncEnv`](../src/scbot/runner.py#L23-L37). To `Protocol`, czyli odpowiednik
+interfejsu z Javy z jedną różnicą: klasa nie musi go jawnie implementować, wystarczy, że
+ma te metody. `SC2MacroEnv` je ma, a testy podstawiają w to miejsce atrapę `FakeEnv`.
+Zgodność sprawdza mypy ([runbook 06](../runbooks/06-testy-i-zaleznosci.md#typy)).
+
 Najpierw wersja dla jednej gry, bo jest tylko opakowaniem:
-[`run_episode`](../src/scbot/runner.py#L178-L200) woła `run_episodes` z jednym
+[`run_episode`](../src/scbot/runner.py#L196-L218) woła `run_episodes` z jednym
 środowiskiem i jednym epizodem.
 
-Właściwa pętla to [`run_episodes`](../src/scbot/runner.py#L49-L175). Każde środowisko
-dostaje „slot" ([`_Slot`](../src/scbot/runner.py#L35)), który pamięta, w której grze
+Właściwa pętla to [`run_episodes`](../src/scbot/runner.py#L67-L193). Każde środowisko
+dostaje „slot" ([`_Slot`](../src/scbot/runner.py#L53)), który pamięta, w której grze
 jest, ostatnią obserwację i ostatnią akcję.
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`start`](../src/scbot/runner.py#L83-L90) | Zaczyna grę w slocie: `reset_async` z ziarnem `seed + numer epizodu` i ewentualną ścieżką powtórki. | Ziarno zależne od numeru sprawia, że grę numer `n` da się odtworzyć. |
-| [`start_next`](../src/scbot/runner.py#L92-L98) | Przydziela slotowi kolejny numer epizodu albo wyłącza slot, gdy numery się skończyły. | Numeracja w kolejności startu. |
-| [`advance`](../src/scbot/runner.py#L100-L107) | Odbiera jedną odpowiedź z gry (`collect`). Pierwsza odpowiedź po `reset` to tylko obserwacja początkowa. | Przy pierwszej nie ma jeszcze poprzedniej akcji, więc nie ma czego uczyć. |
-| [`observe`](../src/scbot/runner.py#L108-L117) | Przy uczeniu podaje agentowi przejście: poprzednia obserwacja, akcja, nagroda, nowa obserwacja, nowa maska, czy koniec, ile interwałów minęło. | To jest jedyne miejsce, w którym agent się uczy. |
-| [`on_step`](../src/scbot/runner.py#L118-L123) | Woła funkcję obserwatora (wypisywanie, zapis do `steps.jsonl`). | Logowanie jest poza pętlą, żeby jej nie zaśmiecać. |
-| [koniec gry](../src/scbot/runner.py#L126-L141) | Zamyka epizod u agenta, składa podsumowanie i oddaje wyniki w kolejności numerów, nawet jeśli późniejsza gra skończyła się wcześniej. Potem slot zaczyna następną grę. | Żeby numer w plikach wyników zawsze znaczył tę samą grę. |
-| [następna akcja](../src/scbot/runner.py#L143-L145) | Gra trwa: agent wybiera akcję, slot wysyła ją do gry i nie czeka na odpowiedź. | Dzięki temu inne gry mogą w tym czasie symulować. |
-| [pętla główna](../src/scbot/runner.py#L147-L175) | Startuje wszystkie sloty, a potem w kółko czeka (`wait`), aż którakolwiek gra odpowie, i ją obsługuje. | Gry odpowiadają w różnym tempie; nikt na nikogo nie czeka. |
-| [awaria gry](../src/scbot/runner.py#L164-L174) | Gdy gra padnie, ten sam epizod startuje od nowa. Po pięciu awariach bez żadnej ukończonej gry pętla się poddaje. | Pojedynczy błąd startu gry nie powinien zabijać godzinnego treningu. |
+| [`start`](../src/scbot/runner.py#L101-L108) | Zaczyna grę w slocie: `reset_async` z ziarnem `seed + numer epizodu` i ewentualną ścieżką powtórki. | Ziarno zależne od numeru sprawia, że grę numer `n` da się odtworzyć. |
+| [`start_next`](../src/scbot/runner.py#L110-L116) | Przydziela slotowi kolejny numer epizodu albo wyłącza slot, gdy numery się skończyły. | Numeracja w kolejności startu. |
+| [`advance`](../src/scbot/runner.py#L118-L125) | Odbiera jedną odpowiedź z gry (`collect`). Pierwsza odpowiedź po `reset` to tylko obserwacja początkowa. | Przy pierwszej nie ma jeszcze poprzedniej akcji, więc nie ma czego uczyć. |
+| [`observe`](../src/scbot/runner.py#L126-L135) | Przy uczeniu podaje agentowi przejście: poprzednia obserwacja, akcja, nagroda, nowa obserwacja, nowa maska, czy koniec, ile interwałów minęło. | To jest jedyne miejsce, w którym agent się uczy. |
+| [`on_step`](../src/scbot/runner.py#L136-L141) | Woła funkcję obserwatora (wypisywanie, zapis do `steps.jsonl`). | Logowanie jest poza pętlą, żeby jej nie zaśmiecać. |
+| [koniec gry](../src/scbot/runner.py#L144-L159) | Zamyka epizod u agenta, składa podsumowanie i oddaje wyniki w kolejności numerów, nawet jeśli późniejsza gra skończyła się wcześniej. Potem slot zaczyna następną grę. | Żeby numer w plikach wyników zawsze znaczył tę samą grę. |
+| [następna akcja](../src/scbot/runner.py#L161-L163) | Gra trwa: agent wybiera akcję, slot wysyła ją do gry i nie czeka na odpowiedź. | Dzięki temu inne gry mogą w tym czasie symulować. |
+| [pętla główna](../src/scbot/runner.py#L165-L193) | Startuje wszystkie sloty, a potem w kółko czeka (`wait`), aż którakolwiek gra odpowie, i ją obsługuje. | Gry odpowiadają w różnym tempie; nikt na nikogo nie czeka. |
+| [awaria gry](../src/scbot/runner.py#L182-L192) | Gdy gra padnie, ten sam epizod startuje od nowa. Po pięciu awariach bez żadnej ukończonej gry pętla się poddaje. | Pojedynczy błąd startu gry nie powinien zabijać godzinnego treningu. |
 
-Na końcu pliku jest [`wilson_interval`](../src/scbot/runner.py#L203-L211), czyli
+Na końcu pliku jest [`wilson_interval`](../src/scbot/runner.py#L221-L229), czyli
 przedział ufności dla odsetka wygranych używany w ewaluacji.
 
 **Sprawdź sam.** Testy tego pliku nie potrzebują gry. Przeczytaj `FakeEnv`
@@ -340,25 +350,25 @@ nadużywać ([wyniki.md](wyniki.md)).
 | [198–205](../src/scbot/env/macro.py#L198-L205) | Szkolenie: w każdym bezczynnym budynku jedna jednostka, ale nie więcej, niż pozwalają wolne minerały. | Jedna decyzja uruchamia całą dostępną produkcję. |
 | [206–217](../src/scbot/env/macro.py#L206-L217) | Budowa magazynu lub koszar: `bot.build` z python-sc2 szuka wolnego miejsca wokół punktu z [`_build_anchor`](../src/scbot/env/macro.py#L228-L236) i wybiera robotnika. | Agent nie decyduje, gdzie i kim budować. |
 | [`_expand`](../src/scbot/env/macro.py#L238-L246) | Stawia Command Center dokładnie w zapamiętanym miejscu. Po niepowodzeniu przestaje je oferować do następnego sprawdzenia. | Odrzucona ekspansja nie może być oferowana w kółko. |
-| [220–225](../src/scbot/env/macro.py#L220-L225) | `ATTACK` i `RETREAT` wołają [`_set_army_mode`](../src/scbot/env/macro.py#L277-L281): zmiana trybu i zapamiętanie chwili zmiany. | Od tej chwili liczy się 30 s blokady. |
+| [220–225](../src/scbot/env/macro.py#L220-L225) | `ATTACK` i `RETREAT` wołają [`_set_army_mode`](../src/scbot/env/macro.py#L279-L283): zmiana trybu i zapamiętanie chwili zmiany. | Od tej chwili liczy się 30 s blokady. |
 
-[`refresh_expansion_site`](../src/scbot/env/macro.py#L248-L275) wybiera miejsce pod następną bazę: lokalizacja
+[`refresh_expansion_site`](../src/scbot/env/macro.py#L248-L277) wybiera miejsce pod następną bazę: lokalizacja
 bliższa naszemu startowi niż startowi wroga, niezajęta przez nas, na której da się teraz
 postawić Command Center i do której da się dojść. Jest wołana co kilka sekund w ramach
 porządków.
 
-**Porządki między decyzjami.** [`housekeeping`](../src/scbot/env/macro.py#L285-L292) działa w każdym kroku
+**Porządki między decyzjami.** [`housekeeping`](../src/scbot/env/macro.py#L287-L294) działa w każdym kroku
 bota, niezależnie od tego, czy agent był pytany:
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [287–291](../src/scbot/env/macro.py#L287-L291) | Co 8 kroków bota: rozsyła bezczynnych robotników, odświeża miejsce pod bazę, dosyła SCV do przerwanych budów, opuszcza magazyny. | To czynności, których agent nie powinien musieć się uczyć. |
-| [`_control_army`](../src/scbot/env/macro.py#L307-L312) | Co krok: ustala, czy trzeba odświeżyć rozkazy (zmiana trybu albo minęło 12 kroków). | Rozkazy nie są wysyłane w każdym kroku, żeby nie zalewać gry. |
-| [atak](../src/scbot/env/macro.py#L314-L319) | W trybie ataku jednostki bezczynne (i wszystkie przy odświeżeniu) idą z atakiem na cel. | Nowo wyszkolone jednostki same dołączają. |
-| [odwrót](../src/scbot/env/macro.py#L321-L325) | Tuż po `RETREAT` cała armia dostaje zwykły ruch do punktu zbiórki. | Ruch bez ataku, żeby jednostki nie zatrzymywały się po drodze. |
-| [obrona](../src/scbot/env/macro.py#L327-L332) | W obronie, gdy są zagrożenia, armia atakuje najbliższe. | Obrona bazy nie wymaga decyzji agenta. |
-| [zbiórka](../src/scbot/env/macro.py#L334-L336) | Bez zagrożeń bezczynne jednostki wracają do punktu zbiórki. | Armia nie rozchodzi się po mapie. |
-| [`_attack_target`](../src/scbot/env/macro.py#L338-L363) | Cel ataku: najbliższy znany budynek wroga, potem start wroga, a gdy jest pusty, kolejne lokalizacje baz. | Gra kończy się po zniszczeniu wszystkich budynków, więc trzeba je znaleźć. |
+| [287–291](../src/scbot/env/macro.py#L289-L293) | Co 8 kroków bota: rozsyła bezczynnych robotników, odświeża miejsce pod bazę, dosyła SCV do przerwanych budów, opuszcza magazyny. | To czynności, których agent nie powinien musieć się uczyć. |
+| [`_control_army`](../src/scbot/env/macro.py#L309-L314) | Co krok: ustala, czy trzeba odświeżyć rozkazy (zmiana trybu albo minęło 12 kroków). | Rozkazy nie są wysyłane w każdym kroku, żeby nie zalewać gry. |
+| [atak](../src/scbot/env/macro.py#L316-L321) | W trybie ataku jednostki bezczynne (i wszystkie przy odświeżeniu) idą z atakiem na cel. | Nowo wyszkolone jednostki same dołączają. |
+| [odwrót](../src/scbot/env/macro.py#L323-L327) | Tuż po `RETREAT` cała armia dostaje zwykły ruch do punktu zbiórki. | Ruch bez ataku, żeby jednostki nie zatrzymywały się po drodze. |
+| [obrona](../src/scbot/env/macro.py#L329-L334) | W obronie, gdy są zagrożenia, armia atakuje najbliższe. | Obrona bazy nie wymaga decyzji agenta. |
+| [zbiórka](../src/scbot/env/macro.py#L336-L338) | Bez zagrożeń bezczynne jednostki wracają do punktu zbiórki. | Armia nie rozchodzi się po mapie. |
+| [`_attack_target`](../src/scbot/env/macro.py#L340-L365) | Cel ataku: najbliższy znany budynek wroga, potem start wroga, a gdy jest pusty, kolejne lokalizacje baz. | Gra kończy się po zniszczeniu wszystkich budynków, więc trzeba je znaleźć. |
 
 Warunki dostępności i opis zachowania prozą: [srodowisko.md](srodowisko.md#akcje).
 
@@ -401,25 +411,25 @@ w [model-a-q-learning.md](model-a-q-learning.md); tu idziemy po kodzie.
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`BinSpec`](../src/scbot/agents/qlearning.py#L33-L58) | Jedna cecha i jej progi. `n` progów daje `n + 1` koszyków. | Progi są w surowych jednostkach, żeby dało się je czytać („150 minerałów"). |
-| [`DEFAULT_BINS`](../src/scbot/agents/qlearning.py#L63-L72) | Osiem cech i ich progi, razem 7200 stanów. | Tablica musi być mała, żeby stany powtarzały się wystarczająco często. |
-| [`StateDiscretizer.__call__`](../src/scbot/agents/qlearning.py#L86-L93) | Bierze z obserwacji wybrane cechy, cofa skalowanie, zaokrągla i dla każdej znajduje numer koszyka. Wynik to krotka liczb, czyli stan. | Krotka jest kluczem słownika, którym jest tablica Q. |
+| [`BinSpec`](../src/scbot/agents/qlearning.py#L34-L59) | Jedna cecha i jej progi. `n` progów daje `n + 1` koszyków. | Progi są w surowych jednostkach, żeby dało się je czytać („150 minerałów"). |
+| [`DEFAULT_BINS`](../src/scbot/agents/qlearning.py#L64-L73) | Osiem cech i ich progi, razem 7200 stanów. | Tablica musi być mała, żeby stany powtarzały się wystarczająco często. |
+| [`StateDiscretizer.__call__`](../src/scbot/agents/qlearning.py#L87-L94) | Bierze z obserwacji wybrane cechy, cofa skalowanie, zaokrągla i dla każdej znajduje numer koszyka. Wynik to krotka liczb, czyli stan. | Krotka jest kluczem słownika, którym jest tablica Q. |
 
 **Agent.**
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`QLearningConfig`](../src/scbot/agents/qlearning.py#L114-L122) | Hiperparametry: α, γ, harmonogram ε, wartość początkowa. | Zapisują się razem z tablicą. |
-| [`__init__`](../src/scbot/agents/qlearning.py#L130-L141) | Tablica `q` i licznik odwiedzin `visits` to słowniki `stan → 8 liczb`. Na starcie puste. | Pamiętane są tylko stany, które faktycznie wystąpiły. |
-| [`epsilon_at`](../src/scbot/agents/qlearning.py#L150-L154) | ε maleje liniowo z liczbą ukończonych gier, od wartości początkowej do końcowej. | Na początku eksploracja, potem korzystanie z tablicy. |
-| [`act`](../src/scbot/agents/qlearning.py#L156-L162) | Z prawdopodobieństwem ε losuje dostępną akcję, w przeciwnym razie bierze zachłanną. | Losuje tylko spośród akcji z maski. |
-| [`greedy_action`](../src/scbot/agents/qlearning.py#L164-L171) | Najwyższe Q wśród dostępnych akcji. Stan nieznany albo remis rozstrzyga losowanie. | Bez losowania remisów agent zawsze wybierałby akcję o najniższym numerze. |
-| [stan i wiersz](../src/scbot/agents/qlearning.py#L185-L187) | Zamienia obserwację na stan i bierze jego wiersz z tablicy (tworzy go, jeśli nie istnieje). | |
-| [cel uczenia](../src/scbot/agents/qlearning.py#L189-L198) | Cel to nagroda plus zdyskontowana najlepsza wartość następnego stanu, liczona tylko po dostępnych tam akcjach. Dyskonto to `gamma ** intervals_elapsed`. Po końcu gry cel to sama nagroda. | Kroki mają różną długość, więc dyskonto musi zależeć od czasu. |
-| [aktualizacja](../src/scbot/agents/qlearning.py#L200-L202) | Przesuwa `Q(s, a)` o ułamek α w stronę celu i zwiększa licznik odwiedzin. | To jest cała reguła Q-Learningu. |
-| [`_row`](../src/scbot/agents/qlearning.py#L207-L213) | Nowy stan dostaje wiersz wypełniony wartością `initial_q`. | Wartość początkowa decyduje, jak agent traktuje nieznane akcje. |
-| [`save`](../src/scbot/agents/qlearning.py#L217-L244) | Zapisuje stany, wartości, odwiedziny i metadane do `.npz`, najpierw do pliku tymczasowego. | Przerwany zapis nie niszczy poprzedniej tablicy. |
-| [`load`](../src/scbot/agents/qlearning.py#L246-L265) | Wczytuje plik i odmawia, jeśli lista akcji jest inna niż obecna. | Kolumny tablicy odpowiadają akcjom. |
+| [`QLearningConfig`](../src/scbot/agents/qlearning.py#L115-L123) | Hiperparametry: α, γ, harmonogram ε, wartość początkowa. | Zapisują się razem z tablicą. |
+| [`__init__`](../src/scbot/agents/qlearning.py#L131-L142) | Tablica `q` i licznik odwiedzin `visits` to słowniki `stan → 8 liczb`. Na starcie puste. | Pamiętane są tylko stany, które faktycznie wystąpiły. |
+| [`epsilon_at`](../src/scbot/agents/qlearning.py#L151-L155) | ε maleje liniowo z liczbą ukończonych gier, od wartości początkowej do końcowej. | Na początku eksploracja, potem korzystanie z tablicy. |
+| [`act`](../src/scbot/agents/qlearning.py#L157-L163) | Z prawdopodobieństwem ε losuje dostępną akcję, w przeciwnym razie bierze zachłanną. | Losuje tylko spośród akcji z maski. |
+| [`greedy_action`](../src/scbot/agents/qlearning.py#L165-L172) | Najwyższe Q wśród dostępnych akcji. Stan nieznany albo remis rozstrzyga losowanie. | Bez losowania remisów agent zawsze wybierałby akcję o najniższym numerze. |
+| [stan i wiersz](../src/scbot/agents/qlearning.py#L186-L188) | Zamienia obserwację na stan i bierze jego wiersz z tablicy (tworzy go, jeśli nie istnieje). | |
+| [cel uczenia](../src/scbot/agents/qlearning.py#L190-L199) | Cel to nagroda plus zdyskontowana najlepsza wartość następnego stanu, liczona tylko po dostępnych tam akcjach. Dyskonto to `gamma ** intervals_elapsed`. Po końcu gry cel to sama nagroda. | Kroki mają różną długość, więc dyskonto musi zależeć od czasu. |
+| [aktualizacja](../src/scbot/agents/qlearning.py#L201-L203) | Przesuwa `Q(s, a)` o ułamek α w stronę celu i zwiększa licznik odwiedzin. | To jest cała reguła Q-Learningu. |
+| [`_row`](../src/scbot/agents/qlearning.py#L208-L214) | Nowy stan dostaje wiersz wypełniony wartością `initial_q`. | Wartość początkowa decyduje, jak agent traktuje nieznane akcje. |
+| [`save`](../src/scbot/agents/qlearning.py#L218-L245) | Zapisuje stany, wartości, odwiedziny i metadane do `.npz`, najpierw do pliku tymczasowego. | Przerwany zapis nie niszczy poprzedniej tablicy. |
+| [`load`](../src/scbot/agents/qlearning.py#L247-L266) | Wczytuje plik i odmawia, jeśli lista akcji jest inna niż obecna. | Kolumny tablicy odpowiadają akcjom. |
 
 **Sprawdź sam.** `tests/test_qlearning.py` zawiera test
 `test_learns_the_better_action_on_a_two_step_task`: agent uczy się na dwukrokowym

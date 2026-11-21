@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -33,13 +35,15 @@ def only(*actions: MacroAction) -> np.ndarray:
     ("minerals", "bucket"),
     [(0, 0), (49, 0), (50, 1), (99, 1), (100, 2), (149, 2), (150, 3), (399, 3), (400, 4), (900, 4)],
 )
-def test_bucket_boundaries_are_exact_despite_float32_observations(minerals, bucket):
+def test_bucket_boundaries_are_exact_despite_float32_observations(
+    minerals: int, bucket: int
+) -> None:
     discretizer = StateDiscretizer([BinSpec("minerals", (50, 100, 150, 400))])
 
     assert discretizer(observation(minerals=minerals)) == (bucket,)
 
 
-def test_state_combines_one_bucket_per_configured_feature():
+def test_state_combines_one_bucket_per_configured_feature() -> None:
     discretizer = StateDiscretizer(
         [BinSpec("minerals", (100,)), BinSpec("marines", (1, 8)), BinSpec("army_attacking", (0.5,))]
     )
@@ -55,11 +59,11 @@ def test_state_combines_one_bucket_per_configured_feature():
     }
 
 
-def test_default_state_space_stays_small_enough_for_a_table():
+def test_default_state_space_stays_small_enough_for_a_table() -> None:
     assert StateDiscretizer(DEFAULT_BINS).n_states == 7200
 
 
-def test_unknown_feature_and_unsorted_edges_are_rejected():
+def test_unknown_feature_and_unsorted_edges_are_rejected() -> None:
     with pytest.raises(ValueError, match="unknown observation feature"):
         BinSpec("not_a_feature", (1,))
     with pytest.raises(ValueError, match="ascending"):
@@ -69,7 +73,7 @@ def test_unknown_feature_and_unsorted_edges_are_rejected():
 # ---------------------------------------------------------------- learning rule
 
 
-def test_update_follows_the_q_learning_rule():
+def test_update_follows_the_q_learning_rule() -> None:
     agent = TabularQAgent(QLearningConfig(alpha=0.5, gamma=0.9))
     s, s_next = observation(minerals=0), observation(minerals=400)
     agent.q[agent.discretizer(s_next)] = np.arange(NUM_ACTIONS, dtype=np.float64)
@@ -83,7 +87,7 @@ def test_update_follows_the_q_learning_rule():
     assert agent.updates == 1
 
 
-def test_bootstrap_ignores_actions_that_are_unavailable_in_the_next_state():
+def test_bootstrap_ignores_actions_that_are_unavailable_in_the_next_state() -> None:
     agent = TabularQAgent(QLearningConfig(alpha=1.0, gamma=1.0))
     s, s_next = observation(minerals=0), observation(minerals=400)
     next_values = np.zeros(NUM_ACTIONS)
@@ -103,7 +107,7 @@ def test_bootstrap_ignores_actions_that_are_unavailable_in_the_next_state():
     assert agent.q[agent.discretizer(s)][MacroAction.NO_OP] == pytest.approx(2.0)
 
 
-def test_terminal_transition_does_not_bootstrap():
+def test_terminal_transition_does_not_bootstrap() -> None:
     agent = TabularQAgent(QLearningConfig(alpha=1.0, gamma=0.99))
     s, s_next = observation(minerals=0), observation(minerals=400)
     agent.q[agent.discretizer(s_next)] = np.full(NUM_ACTIONS, 100.0)
@@ -113,7 +117,7 @@ def test_terminal_transition_does_not_bootstrap():
     assert agent.q[agent.discretizer(s)][MacroAction.ATTACK] == pytest.approx(1.0)
 
 
-def test_longer_steps_are_discounted_more():
+def test_longer_steps_are_discounted_more() -> None:
     """Waiting several intervals must look worse than reaching the same state at once."""
     agent = TabularQAgent(QLearningConfig(alpha=1.0, gamma=0.9))
     s, s_next = observation(minerals=0), observation(minerals=400)
@@ -130,7 +134,7 @@ def test_longer_steps_are_discounted_more():
 # ---------------------------------------------------------------- acting
 
 
-def test_greedy_action_is_the_best_available_one():
+def test_greedy_action_is_the_best_available_one() -> None:
     agent = TabularQAgent()
     obs = observation(minerals=200)
     values = np.zeros(NUM_ACTIONS)
@@ -143,7 +147,7 @@ def test_greedy_action_is_the_best_available_one():
     assert action == MacroAction.TRAIN_MARINE
 
 
-def test_exploration_only_picks_available_actions():
+def test_exploration_only_picks_available_actions() -> None:
     agent = TabularQAgent(QLearningConfig(epsilon_start=1.0, epsilon_end=1.0))
     mask = only(MacroAction.NO_OP, MacroAction.BUILD_SUPPLY_DEPOT)
 
@@ -152,7 +156,7 @@ def test_exploration_only_picks_available_actions():
     assert chosen == {MacroAction.NO_OP, MacroAction.BUILD_SUPPLY_DEPOT}
 
 
-def test_epsilon_decays_linearly_per_finished_episode():
+def test_epsilon_decays_linearly_per_finished_episode() -> None:
     agent = TabularQAgent(
         QLearningConfig(epsilon_start=1.0, epsilon_end=0.1, epsilon_decay_episodes=10)
     )
@@ -166,7 +170,7 @@ def test_epsilon_decays_linearly_per_finished_episode():
     assert agent.epsilon == pytest.approx(0.1)
 
 
-def test_learns_the_better_action_on_a_two_step_task():
+def test_learns_the_better_action_on_a_two_step_task() -> None:
     """Reward arrives only after the second step, so it must propagate through the table."""
     agent = TabularQAgent(
         QLearningConfig(alpha=0.5, gamma=0.9, epsilon_start=1.0, epsilon_end=1.0, seed=1)
@@ -195,7 +199,7 @@ def test_learns_the_better_action_on_a_two_step_task():
 # ---------------------------------------------------------------- persistence
 
 
-def test_saved_table_is_restored_exactly(tmp_path):
+def test_saved_table_is_restored_exactly(tmp_path: Path) -> None:
     agent = TabularQAgent(
         QLearningConfig(alpha=0.3, gamma=0.95, epsilon_decay_episodes=40, seed=7),
         StateDiscretizer([BinSpec("minerals", (50, 150)), BinSpec("marines", (5,))]),
@@ -221,7 +225,7 @@ def test_saved_table_is_restored_exactly(tmp_path):
         np.testing.assert_array_equal(restored.visits[state], agent.visits[state])
 
 
-def test_empty_table_can_be_saved_and_loaded(tmp_path):
+def test_empty_table_can_be_saved_and_loaded(tmp_path: Path) -> None:
     restored = TabularQAgent.load(TabularQAgent().save(tmp_path / "empty.npz"))
 
     assert restored.q == {}

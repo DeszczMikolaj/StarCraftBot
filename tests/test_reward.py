@@ -14,7 +14,7 @@ CONFIG = RewardConfig(
 )
 
 
-def test_step_rewards_only_the_change_since_the_previous_step():
+def test_step_rewards_only_the_change_since_the_previous_step() -> None:
     tracker = RewardTracker(CONFIG)
     tracker.step(RewardCounters(marines_trained=2, workers_trained=12))
 
@@ -30,7 +30,7 @@ def test_step_rewards_only_the_change_since_the_previous_step():
     assert reward == pytest.approx(0.03 + 0.001 + 0.1 - 0.01)
 
 
-def test_unchanged_counters_give_zero_reward():
+def test_unchanged_counters_give_zero_reward() -> None:
     tracker = RewardTracker(CONFIG)
     counters = RewardCounters(marines_trained=4, value_killed=500)
     tracker.step(counters)
@@ -43,7 +43,7 @@ def test_unchanged_counters_give_zero_reward():
 @pytest.mark.parametrize(
     ("result", "terminal"), [("Victory", 1.0), ("Defeat", -1.0), ("Tie", 0.0), ("Undecided", 0.0)]
 )
-def test_finish_adds_the_terminal_reward(result, terminal):
+def test_finish_adds_the_terminal_reward(result: str, terminal: float) -> None:
     tracker = RewardTracker(CONFIG)
     tracker.step(RewardCounters())
 

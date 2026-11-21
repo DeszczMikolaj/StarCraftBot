@@ -9,7 +9,7 @@ import subprocess
 import time
 from multiprocessing.connection import Connection
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import gymnasium as gym
 import numpy as np
@@ -202,7 +202,7 @@ class SC2MacroEnv(gym.Env):
                 if self._conn.poll(POLL_INTERVAL_S):
                     kind, payload = self._conn.recv()
                     if kind == "step":
-                        return payload
+                        return cast(StepData, payload)  # the pipe carries untyped objects
                     self._stop_worker()
                     raise SC2EnvError(f"the game worker failed:\n{payload}")
             except (EOFError, OSError) as error:

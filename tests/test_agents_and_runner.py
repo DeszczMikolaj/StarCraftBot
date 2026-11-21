@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from typing import Any
 
 import numpy as np
 import pytest
@@ -9,7 +10,7 @@ from scbot.env.actions import NUM_ACTIONS, MacroAction
 from scbot.env.bridge import StepData
 from scbot.env.observation import FEATURE_NAMES, to_vector
 from scbot.env.sc2_env import SC2EnvError
-from scbot.runner import run_episode, run_episodes, wilson_interval
+from scbot.runner import StepRecord, run_episode, run_episodes, wilson_interval
 
 
 def observation(**overrides: float) -> np.ndarray:
@@ -24,7 +25,7 @@ def only(*actions: MacroAction) -> np.ndarray:
     return mask
 
 
-def test_random_agent_respects_the_action_mask():
+def test_random_agent_respects_the_action_mask() -> None:
     agent = RandomAgent(seed=0)
     mask = only(MacroAction.NO_OP, MacroAction.TRAIN_SCV, MacroAction.ATTACK)
 
@@ -33,7 +34,7 @@ def test_random_agent_respects_the_action_mask():
     assert chosen == {MacroAction.NO_OP, MacroAction.TRAIN_SCV, MacroAction.ATTACK}
 
 
-def test_scripted_agent_builds_supply_before_it_runs_out():
+def test_scripted_agent_builds_supply_before_it_runs_out() -> None:
     agent = ScriptedAgent()
     obs = observation(supply_left=1, workers=14, townhalls=1, minerals=120)
     mask = only(MacroAction.NO_OP, MacroAction.TRAIN_SCV, MacroAction.BUILD_SUPPLY_DEPOT)
@@ -41,7 +42,7 @@ def test_scripted_agent_builds_supply_before_it_runs_out():
     assert agent.act(obs, mask, explore=False) == MacroAction.BUILD_SUPPLY_DEPOT
 
 
-def test_scripted_agent_attacks_once_the_army_is_large_enough():
+def test_scripted_agent_attacks_once_the_army_is_large_enough() -> None:
     agent = ScriptedAgent(attack_at_marines=16)
     mask = only(MacroAction.NO_OP, MacroAction.TRAIN_MARINE, MacroAction.ATTACK)
 
@@ -52,7 +53,7 @@ def test_scripted_agent_attacks_once_the_army_is_large_enough():
     assert agent.act(large, mask, explore=False) == MacroAction.ATTACK
 
 
-def test_scripted_agent_never_picks_an_unavailable_action():
+def test_scripted_agent_never_picks_an_unavailable_action() -> None:
     agent = ScriptedAgent()
     obs = observation(marines=40, supply_left=0, workers=5, townhalls=1)
 
@@ -72,7 +73,7 @@ class FakeEnv:
     def __init__(self, length: int = 3, crashes: int = 0) -> None:
         self.length = length
         self.crashes_left = crashes  # how many upcoming games crash on their first step
-        self.resets: list[dict] = []
+        self.resets: list[dict[str, Any]] = []
         self.actions: list[int] = []
         self._crash_this_game = False
         self._decision = 0
@@ -90,7 +91,9 @@ class FakeEnv:
         obs = observation(minerals=100 * self._decision)
         self._sender.send(StepData(obs, reward, terminated, False, info))
 
-    def reset_async(self, *, seed=None, options=None) -> None:
+    def reset_async(
+        self, *, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> None:
         self.resets.append({"seed": seed, "options": options})
         self._decision = 0
         self._crash_this_game = self.crashes_left > 0
@@ -106,7 +109,7 @@ class FakeEnv:
         self._answer(1.0)
 
     def collect(self) -> StepData:
-        answer = self.connection.recv()
+        answer: StepData | None = self.connection.recv()
         if answer is None:
             raise SC2EnvError("simulated crash")
         return answer
@@ -117,26 +120,33 @@ class FakeEnv:
 
 class RecordingAgent(Agent):
     def __init__(self) -> None:
-        self.transitions: list[tuple] = []
+        self.transitions: list[tuple[int, float, bool]] = []
         self.elapsed: list[float] = []
         self.episodes_ended = 0
 
-    def act(self, obs, action_mask, *, explore):
+    def act(self, obs: np.ndarray, action_mask: np.ndarray, *, explore: bool) -> int:
         return MacroAction.TRAIN_SCV
 
     def observe(
-        self, obs, action, reward, next_obs, next_action_mask, terminated, intervals_elapsed=1.0
-    ):
+        self,
+        obs: np.ndarray,
+        action: int,
+        reward: float,
+        next_obs: np.ndarray,
+        next_action_mask: np.ndarray,
+        terminated: bool,
+        intervals_elapsed: float = 1.0,
+    ) -> None:
         self.transitions.append((action, reward, terminated))
         self.elapsed.append(intervals_elapsed)
 
-    def end_episode(self):
+    def end_episode(self) -> None:
         self.episodes_ended += 1
 
 
-def test_run_episode_feeds_every_transition_to_a_learning_agent():
+def test_run_episode_feeds_every_transition_to_a_learning_agent() -> None:
     env, agent = FakeEnv(), RecordingAgent()
-    steps = []
+    steps: list[StepRecord] = []
 
     summary = run_episode(
         env,
@@ -164,7 +174,7 @@ def test_run_episode_feeds_every_transition_to_a_learning_agent():
     assert summary["wall_seconds"] >= 0
 
 
-def test_run_episode_without_learning_leaves_the_agent_untouched():
+def test_run_episode_without_learning_leaves_the_agent_untouched() -> None:
     agent = RecordingAgent()
 
     run_episode(FakeEnv(), agent, explore=False, learn=False)
@@ -173,7 +183,7 @@ def test_run_episode_without_learning_leaves_the_agent_untouched():
     assert agent.episodes_ended == 0
 
 
-def test_parallel_episodes_are_reported_in_start_order():
+def test_parallel_episodes_are_reported_in_start_order() -> None:
     # The second environment plays much shorter games, so its episodes finish first.
     slow, fast = FakeEnv(length=9), FakeEnv(length=2)
     agent = RecordingAgent()
@@ -198,7 +208,7 @@ def test_parallel_episodes_are_reported_in_start_order():
     assert len(agent.transitions) == len(slow.actions) + len(fast.actions)
 
 
-def test_a_crashed_game_is_replayed_under_the_same_episode_number():
+def test_a_crashed_game_is_replayed_under_the_same_episode_number() -> None:
     env, agent = FakeEnv(length=2, crashes=1), RecordingAgent()
     steps = []
 
@@ -218,7 +228,7 @@ def test_a_crashed_game_is_replayed_under_the_same_episode_number():
     assert agent.episodes_ended == 2
 
 
-def test_repeated_crashes_stop_the_run():
+def test_repeated_crashes_stop_the_run() -> None:
     env = FakeEnv(crashes=100)
 
     with pytest.raises(SC2EnvError, match="simulated crash"):
@@ -228,14 +238,14 @@ def test_repeated_crashes_stop_the_run():
 # ---------------------------------------------------------------- statistics
 
 
-def test_wilson_interval_matches_reference_values():
+def test_wilson_interval_matches_reference_values() -> None:
     low, high = wilson_interval(8, 10)
 
     assert low == pytest.approx(0.4902, abs=1e-3)
     assert high == pytest.approx(0.9433, abs=1e-3)
 
 
-def test_wilson_interval_stays_inside_zero_one_at_the_extremes():
+def test_wilson_interval_stays_inside_zero_one_at_the_extremes() -> None:
     assert wilson_interval(0, 20)[0] == 0.0
     assert wilson_interval(20, 20)[1] == 1.0
     assert wilson_interval(0, 0) == (0.0, 1.0)

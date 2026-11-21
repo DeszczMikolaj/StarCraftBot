@@ -16,7 +16,7 @@ def main() -> None:
         obs, info = env.reset(seed=0)
         finished = False
         while not finished:
-            action = rng.choice(np.flatnonzero(info["action_mask"]))
+            action = int(rng.choice(np.flatnonzero(info["action_mask"])))
             obs, reward, terminated, truncated, info = env.step(action)
             finished = terminated or truncated
         print(info["episode"]["result"])

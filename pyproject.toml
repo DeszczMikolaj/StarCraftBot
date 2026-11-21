@@ -15,6 +15,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=2.4.1",
     "pytest>=8.3",
     "ruff>=0.8",
 ]
@@ -50,6 +51,18 @@ markers = [
     "sc2: needs a StarCraft II installation (run inside the Docker image or with the Windows client)",
 ]
 addopts = "-m 'not sc2'"
+
+# Static type checking: `uv run mypy` checks everything listed in `files`.
+[tool.mypy]
+python_version = "3.12"
+# Check as for the Docker image, so that the result is the same on every machine.
+platform = "linux"
+files = ["src", "tests", "scripts", "examples"]
+mypy_path = "src"
+strict = true
+warn_unreachable = true
+# python-sc2's helpers for finding the game installation carry no annotations.
+untyped_calls_exclude = ["sc2.paths"]
 
 [tool.ruff]
 line-length = 100

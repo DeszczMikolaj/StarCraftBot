@@ -3,7 +3,9 @@
 docker compose run --rm sc2 pytest -m sc2
 """
 
+from collections.abc import Iterator
 from dataclasses import replace
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -21,13 +23,13 @@ pytestmark = pytest.mark.sc2
 
 
 @pytest.fixture
-def env():
+def env() -> Iterator[SC2MacroEnv]:
     environment = SC2MacroEnv(replace(EnvConfig(), max_game_minutes=2.0))
     yield environment
     environment.close()
 
 
-def test_reset_returns_the_opening_position(env):
+def test_reset_returns_the_opening_position(env: SC2MacroEnv) -> None:
     obs, info = env.reset(seed=1)
 
     assert obs.shape == (OBS_DIM,)
@@ -44,7 +46,7 @@ def test_reset_returns_the_opening_position(env):
     assert not mask[MacroAction.BUILD_BARRACKS] and not mask[MacroAction.ATTACK]
 
 
-def test_an_unavailable_action_is_ignored_and_reported(env):
+def test_an_unavailable_action_is_ignored_and_reported(env: SC2MacroEnv) -> None:
     _, info = env.reset(seed=1)
     assert info["intervals_elapsed"] == 0
 
@@ -59,7 +61,7 @@ def test_an_unavailable_action_is_ignored_and_reported(env):
     assert set(info["reward_components"]) == set(REWARD_COMPONENTS)
 
 
-def test_the_agent_is_not_asked_while_there_is_nothing_to_decide(env):
+def test_the_agent_is_not_asked_while_there_is_nothing_to_decide(env: SC2MacroEnv) -> None:
     _, info = env.reset(seed=1)
 
     # The SCV takes all 50 minerals, so NO_OP is the only option until more are mined.
@@ -71,7 +73,7 @@ def test_the_agent_is_not_asked_while_there_is_nothing_to_decide(env):
     assert info["game_loop"] == info["intervals_elapsed"] * env.config.loops_per_interval
 
 
-def test_no_op_waits_for_a_new_option_or_the_wait_limit(env):
+def test_no_op_waits_for_a_new_option_or_the_wait_limit(env: SC2MacroEnv) -> None:
     limit = env.config.wait_intervals
     _, info = env.reset(seed=1)
     _, _, _, _, info = env.step(MacroAction.TRAIN_SCV)
@@ -90,7 +92,9 @@ def test_no_op_waits_for_a_new_option_or_the_wait_limit(env):
     assert info["raw"]["workers"] == 13  # the SCV ordered at the start has finished
 
 
-def test_game_is_truncated_at_the_time_limit_and_the_worker_is_reused(env):
+def test_game_is_truncated_at_the_time_limit_and_the_worker_is_reused(
+    env: SC2MacroEnv,
+) -> None:
     agent = RandomAgent(seed=0)
 
     first = run_episode(env, agent, explore=True, learn=False, seed=3)
@@ -103,12 +107,12 @@ def test_game_is_truncated_at_the_time_limit_and_the_worker_is_reused(env):
         assert np.isfinite(summary["return"])
 
 
-def test_step_before_reset_is_rejected(env):
+def test_step_before_reset_is_rejected(env: SC2MacroEnv) -> None:
     with pytest.raises(SC2EnvError, match="reset"):
         env.step(MacroAction.NO_OP)
 
 
-def test_replay_is_written_when_requested(env, tmp_path):
+def test_replay_is_written_when_requested(env: SC2MacroEnv, tmp_path: Path) -> None:
     replay = tmp_path / "game.SC2Replay"
     agent = RandomAgent(seed=0)
 

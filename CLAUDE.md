@@ -18,6 +18,7 @@ must be running.
 uv run pytest                                      # unit tests, no game needed
 docker compose run --rm sc2 pytest -m sc2          # integration tests, real game (~40 s)
 uv run ruff check . && uv run ruff format .
+uv run mypy                                        # strict type check of src, tests, scripts, examples
 docker compose run --rm sc2 python -m scbot.doctor --launch
 docker compose run --rm sc2 python -m scbot.play --agent scripted
 docker compose run --rm sc2 python -m scbot.train_q --run-name NAME --episodes N --num-envs 12
@@ -37,6 +38,9 @@ watch a game; measure in the container. See `runbooks/02-klient-windows.md`.
   (`env/actions.py: MacroAction`) are a contract shared by all models. Append only;
   never reorder or remove entries.
 - Any change under `src/scbot/env/` must pass the integration tests.
+- `uv run mypy` (strict) must pass. Annotate every function. Prefer a precise type, a
+  `Protocol` or `cast` with a comment over `Any` or `# type: ignore`. The project owner
+  comes from Java and relies on the types to find their way around the code.
 - Anything that uses `SC2MacroEnv` needs an `if __name__ == "__main__":` guard, because
   the game runs in a spawned worker process.
 - Do not pass absolute container paths as arguments in documented commands: Git Bash on

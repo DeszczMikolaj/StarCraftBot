@@ -54,12 +54,12 @@ def heading_anchors(document: Path) -> set[str]:
     return anchors
 
 
-def test_there_are_documents_to_check():
+def test_there_are_documents_to_check() -> None:
     assert len(DOCUMENTS) > 10
 
 
 @pytest.mark.parametrize("document", DOCUMENTS, ids=document_id)
-def test_links_point_at_existing_files_and_headings(document):
+def test_links_point_at_existing_files_and_headings(document: Path) -> None:
     problems = []
     for text, target_file, fragment in local_links(document):
         if not target_file.exists():
@@ -71,7 +71,7 @@ def test_links_point_at_existing_files_and_headings(document):
 
 
 @pytest.mark.parametrize("document", DOCUMENTS, ids=document_id)
-def test_line_anchors_show_the_code_they_name(document):
+def test_line_anchors_show_the_code_they_name(document: Path) -> None:
     """A link like [`MacroBot.on_step`](bot.py#L62-L68) must contain ``on_step`` there."""
     problems = []
     for text, target_file, fragment in local_links(document):

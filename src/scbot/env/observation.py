@@ -63,7 +63,7 @@ def to_vector(raw: Mapping[str, float]) -> np.ndarray:
     if missing:
         raise KeyError(f"missing observation features: {missing}")
     values = np.array([raw[name] for name in FEATURE_NAMES], dtype=np.float64)
-    return np.clip(values / FEATURE_SCALES, 0.0, OBS_CLIP).astype(np.float32)
+    return np.asarray(np.clip(values / FEATURE_SCALES, 0.0, OBS_CLIP), dtype=np.float32)
 
 
 def to_raw(obs: np.ndarray) -> dict[str, float]:

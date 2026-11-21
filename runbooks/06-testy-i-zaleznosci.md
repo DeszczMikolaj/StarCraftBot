@@ -47,6 +47,66 @@ uv run ruff format .
 Pierwsza komenda zgłasza błędy, druga formatuje pliki. Obie powinny przejść bez uwag
 przed commitem.
 
+## Typy
+
+Każda funkcja ma adnotacje typów, a mypy sprawdza je tak jak kompilator w Javie: przed
+uruchomieniem i bez gry. Pierwsze uruchomienie trwa około pół minuty, bo mypy buduje
+pamięć podręczną w `.mypy_cache/`; kolejne trwają około sekundy.
+
+```bash
+uv run mypy
+```
+
+Sprawdza `src/`, `tests/`, `scripts/` i `examples/`. Poprawny wynik:
+
+```text
+Success: no issues found in 37 source files
+```
+
+Przykład tego, co wyłapuje: wywołanie `env.step("ATTACK")` zamiast numeru akcji daje
+
+```text
+<plik>:<linia>: error: Argument 1 to "step" of "SC2MacroEnv" has incompatible type "str"; expected "int"  [arg-type]
+```
+
+Ustawienia są w `pyproject.toml`, w sekcji `[tool.mypy]`:
+
+- `strict = true`: każda funkcja musi mieć typy parametrów i wyniku, a funkcja o
+  zadeklarowanym typie nie może zwracać wartości nieznanego typu (`Any`).
+- `platform = "linux"`: kod jest sprawdzany tak, jak działa w kontenerze, więc wynik jest
+  ten sam na Windows i na Linuksie.
+
+### Odpowiedniki z Javy
+
+| Java | Python w tym projekcie | Przykład |
+|------|------------------------|----------|
+| interfejs implementowany jawnie | klasa abstrakcyjna (`ABC`), po której się dziedziczy | `Agent` w `agents/base.py`, `TabularQAgent(Agent)` |
+| interfejs bez `implements` | `Protocol`: pasuje każda klasa, która ma wymienione metody | `AsyncEnv` w `runner.py`; pasują do niego `SC2MacroEnv` i testowy `FakeEnv` |
+| `enum` | `IntEnum` | `MacroAction` w `env/actions.py` |
+| `record` | `@dataclass(frozen=True)` | `EnvConfig` w `config.py`, `StepRecord` w `runner.py` |
+| `@Nullable Integer` | `int \| None` | `seed: int \| None = None` |
+| `List<Integer>`, `Map<String, Double>` | `list[int]`, `dict[str, float]` | |
+| rzutowanie `(StepData) obj` | `cast(StepData, obj)` | odbiór odpowiedzi z procesu gry w `env/sc2_env.py` |
+| `Object` | `Any`: wyłącza sprawdzanie dla tej wartości | `info: dict[str, Any]` |
+
+Dwie różnice, o których łatwo zapomnieć:
+
+- **Typy nie działają w czasie wykonania.** Interpreter ich nie sprawdza, a `cast` niczego
+  nie konwertuje ani nie weryfikuje. Błędny typ wyłapie tylko mypy.
+- **Nie ma przeciążania metod.** Jedna nazwa to jedna metoda; warianty robi się
+  parametrami z wartościami domyślnymi.
+
+### Czego mypy nie sprawdzi
+
+- **Kluczy słowników `info`.** To `dict[str, Any]` z kluczami-napisami (`"raw"`,
+  `"action_mask"`), więc literówka w kluczu wyjdzie dopiero w działaniu. Klucze są
+  opisane w [docs/srodowisko.md](../docs/srodowisko.md).
+- **Kształtu tablic numpy.** Typ mówi „tablica", ale nie „wektor długości 24".
+- **Części właściwości python-sc2.** Właściwości z pamięcią podręczną na jedną klatkę gry
+  (np. `expansion_locations_list`) mypy widzi jako typ `Never`, więc ich użycia nie
+  sprawdza. W `env/macro.py` dwa takie miejsca mają `cast` przywracający zadeklarowany
+  typ.
+
 ## Dodanie lub aktualizacja biblioteki
 
 1. Dodaj zależność (zapisuje ją w `pyproject.toml` i aktualizuje `uv.lock`):
@@ -87,6 +147,7 @@ i uruchamiać kontener z dostępem do karty.
 ## Przed commitem
 
 - [ ] `uv run ruff check .` i `uv run ruff format .` bez uwag
+- [ ] `uv run mypy` bez uwag
 - [ ] `uv run pytest` przechodzi
 - [ ] `docker compose run --rm sc2 pytest -m sc2` przechodzi, jeśli zmiana dotyka `src/scbot/env/`
 - [ ] nowe zachowanie ma test, a zmiana interfejsu jest opisana w `docs/`

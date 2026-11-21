@@ -23,7 +23,7 @@ ROWS = [
 ]
 
 
-def test_blocks_count_results_and_average_the_rest():
+def test_blocks_count_results_and_average_the_rest() -> None:
     first, second = summarise_blocks(ROWS, block=2)
 
     assert (first["first"], first["last"], first["games"]) == (1, 2, 2)
@@ -38,7 +38,7 @@ def test_blocks_count_results_and_average_the_rest():
     assert (second["wins"], second["losses"], second["ties"]) == (0, 0, 1)
 
 
-def test_table_has_one_line_per_block_plus_a_header():
+def test_table_has_one_line_per_block_plus_a_header() -> None:
     table = format_table(summarise_blocks(ROWS, block=2))
 
     lines = table.splitlines()

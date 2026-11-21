@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from enum import IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from sc2.ids.ability_id import AbilityId
@@ -260,7 +260,9 @@ class MacroExecutor:
         start = bot.start_location
         enemy_start = bot.enemy_start_locations[0]
         best_distance = math.inf
-        for location in bot.expansion_locations_list:
+        # python-sc2's per-frame cached properties look like ``Never`` to mypy; cast
+        # restores their declared type.
+        for location in cast(list[Point2], bot.expansion_locations_list):
             if location.distance_to(start) >= location.distance_to(enemy_start):
                 continue  # the enemy's half of the map
             if any(
@@ -294,7 +296,7 @@ class MacroExecutor:
     def _resume_abandoned_constructions(self) -> None:
         """Send an SCV to buildings whose builder was killed or pulled away."""
         bot = self.bot
-        for structure in bot.structures_without_construction_SCVs:
+        for structure in cast(Units, bot.structures_without_construction_SCVs):  # see above
             worker = bot.select_build_worker(structure.position)
             if worker is not None:
                 worker.smart(structure)

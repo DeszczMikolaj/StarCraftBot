@@ -77,7 +77,12 @@ uv run pytest
 docker compose run --rm sc2 pytest -m sc2
 ```
 
-Pierwsza komenda uruchamia testy jednostkowe, druga testy z prawdziwą grą.
+```bash
+uv run mypy
+```
+
+Pierwsza komenda uruchamia testy jednostkowe, druga testy z prawdziwą grą, a trzecia
+sprawdza typy w całym kodzie ([runbook 06](runbooks/06-testy-i-zaleznosci.md#typy)).
 
 ## Źródła
 

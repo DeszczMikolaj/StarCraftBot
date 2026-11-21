@@ -18,6 +18,7 @@ import math
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -107,7 +108,7 @@ class StateDiscretizer:
         return [{"feature": spec.feature, "edges": list(spec.edges)} for spec in self.bins]
 
     @classmethod
-    def from_json(cls, data: list[dict[str, object]]) -> StateDiscretizer:
+    def from_json(cls, data: list[dict[str, Any]]) -> StateDiscretizer:
         return cls([BinSpec(str(item["feature"]), tuple(item["edges"])) for item in data])
 
 

@@ -8,15 +8,33 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from multiprocessing import connection as mp_connection
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 
 from scbot.agents.base import Agent
-from scbot.env.sc2_env import SC2EnvError, SC2MacroEnv
+from scbot.env.bridge import StepData
+from scbot.env.sc2_env import SC2EnvError
 
 WAIT_TIMEOUT_S = 0.5
 MAX_CONSECUTIVE_FAILURES = 5
+
+
+class AsyncEnv(Protocol):
+    """What the episode loop needs from an environment (``SC2MacroEnv`` provides it).
+
+    A structural interface: any class with these members fits, without inheriting from
+    it. The tests use this to drive the loop with scripted fake games.
+    """
+
+    @property
+    def connection(self) -> mp_connection.Connection: ...
+    def reset_async(
+        self, *, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> None: ...
+    def step_async(self, action: int) -> None: ...
+    def collect(self) -> StepData: ...
+    def check_health(self) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -35,7 +53,7 @@ class StepRecord:
 class _Slot:
     """One environment and the episode it is currently playing."""
 
-    env: SC2MacroEnv
+    env: AsyncEnv
     active: bool = False
     awaiting_first_step: bool = False
     episode: int = 0
@@ -47,7 +65,7 @@ class _Slot:
 
 
 def run_episodes(
-    envs: Sequence[SC2MacroEnv],
+    envs: Sequence[AsyncEnv],
     agent: Agent,
     episodes: int,
     *,
@@ -176,7 +194,7 @@ def run_episodes(
 
 
 def run_episode(
-    env: SC2MacroEnv,
+    env: AsyncEnv,
     agent: Agent,
     *,
     explore: bool,
