@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from gymnasium.wrappers import RecordEpisodeStatistics
 from sc2.main import get_replay_version
 
 from scbot.agents.simple import RandomAgent
@@ -105,6 +106,21 @@ def test_game_is_truncated_at_the_time_limit_and_the_worker_is_reused(
         assert summary["game_minutes"] == pytest.approx(2.0, abs=0.1)
         assert sum(summary["action_counts"].values()) == summary["decisions"]
         assert np.isfinite(summary["return"])
+
+
+def test_gymnasium_episode_statistics_wrapper_can_wrap_the_env(env: SC2MacroEnv) -> None:
+    # The wrapper writes info["episode"] at the end of a game and fails if it is taken.
+    wrapped = RecordEpisodeStatistics(env)
+    rng = np.random.default_rng(0)
+    _, info = wrapped.reset(seed=6)
+    done = False
+    while not done:
+        action = int(rng.choice(np.flatnonzero(info["action_mask"])))
+        _, _, terminated, truncated, info = wrapped.step(action)
+        done = terminated or truncated
+
+    assert info["game_summary"]["result"] == "Tie"
+    assert info["episode"]["l"] == info["game_summary"]["decisions"]
 
 
 def test_step_before_reset_is_rejected(env: SC2MacroEnv) -> None:

@@ -19,7 +19,7 @@ def main() -> None:
             action = int(rng.choice(np.flatnonzero(info["action_mask"])))
             obs, reward, terminated, truncated, info = env.step(action)
             finished = terminated or truncated
-        print(info["episode"]["result"])
+        print(info["game_summary"]["result"])
     finally:
         env.close()
 

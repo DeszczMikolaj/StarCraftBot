@@ -26,7 +26,7 @@ def main() -> None:
             action = rng.choice(np.flatnonzero(info["action_mask"]))
             obs, reward, terminated, truncated, info = env.step(action)
             finished = terminated or truncated
-        print(info["episode"]["result"])
+        print(info["game_summary"]["result"])
     finally:
         env.close()
 
@@ -218,7 +218,7 @@ Nagroda za krok to suma składników naliczonych od poprzedniej decyzji
 
 Wartość to koszt jednostki w minerałach i gazie, liczony przez grę. Rozbicie nagrody na
 składniki jest w `info["reward_components"]`, a sumy za całą grę w
-`info["episode"]["reward_totals"]`.
+`info["game_summary"]["reward_totals"]`.
 
 Skala orientacyjna: w wygranej grze agenta skryptowego z VeryEasy składniki pomocnicze
 dały razem około +0,36, a nagroda końcowa +1.
@@ -234,20 +234,25 @@ dały razem około +0,36, a nagroda końcowa +1.
 Remis traktujemy jako ucięcie epizodu, a nie stan końcowy: Q-Learning nadal dolicza
 wartość kolejnego stanu.
 
-Ostatni krok zwraca dodatkowo `info["result"]` i `info["episode"]` z podsumowaniem gry:
+Ostatni krok zwraca dodatkowo `info["result"]` i `info["game_summary"]` z podsumowaniem gry:
 wynik, suma nagród, liczba decyzji, czas gry, liczba użyć każdej akcji, liczba akcji
 niewykonanych, wynik punktowy gry, zebrane minerały, liczba wyszkolonych Marines i SCV.
-Pełna lista pól to `EpisodeInfo` w `src/scbot/env/info.py`. `runner.run_episodes`
+Pełna lista pól to `GameSummary` w `src/scbot/env/info.py`. `runner.run_episodes`
 dokłada do niej numer epizodu, końcowe odczyty i czas rzeczywisty (`EpisodeSummary`
 w `runner.py`).
 
 ## Słownik `info`
 
 Klucze i typy są zadeklarowane w [`src/scbot/env/info.py`](../src/scbot/env/info.py):
-`StepInfo` dla każdego kroku, `EpisodeInfo` dla podsumowania gry. `reset` i `step`
+`StepInfo` dla każdego kroku, `GameSummary` dla podsumowania gry. `reset` i `step`
 zwracają `StepInfo`, więc mypy zgłasza literówkę w kluczu albo zły typ wartości przed
 uruchomieniem ([runbook 06](../runbooks/06-testy-i-zaleznosci.md#typy)). W działaniu
 `info` jest zwykłym słownikiem, tak jak wymaga Gymnasium.
+
+Klucza `episode` środowisko nie używa. Wrapper Gymnasium `RecordEpisodeStatistics` wpisuje
+pod nim własne statystyki (`r`, `l`, `t`) i zgłasza błąd, jeśli klucz już jest. Dzięki
+temu środowisko da się nim owinąć, co sprawdza test
+`test_gymnasium_episode_statistics_wrapper_can_wrap_the_env`.
 
 | Klucz | Typ | Zawartość |
 |-------|-----|-----------|
@@ -258,7 +263,7 @@ uruchomieniem ([runbook 06](../runbooks/06-testy-i-zaleznosci.md#typy)). W dzia�
 | `game_loop` | `int` | Numer pętli gry |
 | `intervals_elapsed` | `float` | Interwały decyzyjne od poprzedniej decyzji |
 | `decision` | `int` | Numer decyzji w epizodzie |
-| `result`, `episode` | `str`, `EpisodeInfo` | Tylko w ostatnim kroku |
+| `result`, `game_summary` | `str`, `GameSummary` | Tylko w ostatnim kroku |
 
 ## Konfiguracja
 

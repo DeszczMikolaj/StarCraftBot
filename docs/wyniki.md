@@ -351,7 +351,7 @@ Dla v1 odniesieniem jest początek samego treningu, gdy akcje były niemal losow
 | Trening v5, 12 gier naraz | 500 gier w 42 minuty: 12 gier na minutę (gry są krótsze, bo agent szybciej wygrywa) |
 | Obciążenie przy 12 grach naraz | 12–18 rdzeni, 6–9,5 GB pamięci |
 | Testy jednostkowe | kilka sekund |
-| Testy integracyjne (7 testów z prawdziwą grą) | 40–80 s zależnie od obciążenia |
+| Testy integracyjne (8 testów z prawdziwą grą) | 57 s w Dockerze, 96 s na kliencie Windows |
 | Pierwsze budowanie obrazu | kilkanaście minut, obraz 9,7 GB |
 
 Model A nie używa GPU. Cały koszt uczenia to symulacja gry na procesorze.

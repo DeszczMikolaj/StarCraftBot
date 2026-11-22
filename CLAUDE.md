@@ -16,7 +16,7 @@ must be running.
 
 ```bash
 uv run pytest                                      # unit tests, no game needed
-docker compose run --rm sc2 pytest -m sc2          # integration tests, real game (~40 s)
+docker compose run --rm sc2 pytest -m sc2          # integration tests, real game (~1 min)
 uv run ruff check . && uv run ruff format .
 uv run mypy                                        # strict type check of src, tests, scripts, examples
 docker compose run --rm sc2 python -m scbot.doctor --launch
@@ -66,7 +66,8 @@ watch a game; measure in the container. See `runbooks/02-klient-windows.md`.
 
 - `src/scbot/env/`: environment (`sc2_env.py`), game worker (`worker.py`), bot (`bot.py`),
   scripted macro layer (`macro.py`), observation, reward, and the keys of the `info`
-  dict (`info.py`: `StepInfo`, `EpisodeInfo`; declare a new key there).
+  dict (`info.py`: `StepInfo`, `GameSummary`; declare a new key there, and never call one
+  `episode`, which Gymnasium's `RecordEpisodeStatistics` wrapper reserves).
 - `src/scbot/agents/`: `Agent` interface, random and scripted reference agents,
   `TabularQAgent`.
 - `src/scbot/runner.py`: episode loop for one or many parallel games.

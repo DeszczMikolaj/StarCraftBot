@@ -20,8 +20,8 @@ from numpy.typing import NDArray
 
 # Written with the call syntax because "return" is a Python keyword and cannot be a
 # field name in a class body.
-EpisodeInfo = TypedDict(
-    "EpisodeInfo",
+GameSummary = TypedDict(
+    "GameSummary",
     {
         "result": str,  # "Victory", "Defeat" or "Tie"
         "return": float,  # sum of all rewards in the game
@@ -38,7 +38,7 @@ EpisodeInfo = TypedDict(
         "workers_trained": int,
     },
 )
-"""Summary of a finished game, in ``info["episode"]`` of the final step."""
+"""Summary of a finished game, in ``info["game_summary"]`` of the final step."""
 
 
 class StepInfo(TypedDict):
@@ -51,5 +51,7 @@ class StepInfo(TypedDict):
     game_loop: int
     intervals_elapsed: float  # decision intervals since the previous decision point
     decision: int  # number of decisions made so far in this game
-    result: NotRequired[str]  # final step only, same as ``episode["result"]``
-    episode: NotRequired[EpisodeInfo]  # final step only
+    result: NotRequired[str]  # final step only, same as ``game_summary["result"]``
+    # Final step only. Not called "episode": Gymnasium's RecordEpisodeStatistics wrapper
+    # writes its own statistics under that key and fails if the key is already there.
+    game_summary: NotRequired[GameSummary]

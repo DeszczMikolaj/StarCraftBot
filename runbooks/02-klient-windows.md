@@ -150,7 +150,7 @@ Tablica z treningu v5 wygrała u nas taką grę w 6,3 minuty (398 s zegarowych).
 
 - `doctor --launch` kończy się wierszem `Environment is ready.`
 - `play` kończy się wierszem `result:` z wartością `Victory`, `Defeat` albo `Tie`.
-- Testy integracyjne przechodzą także na kliencie Windows (u nas 7 testów w 78 s; w ich
+- Testy integracyjne przechodzą także na kliencie Windows (u nas 8 testów w 96 s; w ich
   trakcie otwierają się okna gry):
 
 ```bash

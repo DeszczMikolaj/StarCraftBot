@@ -8,7 +8,7 @@ from scbot.agents.base import Agent
 from scbot.agents.simple import RandomAgent, ScriptedAgent
 from scbot.env.actions import NUM_ACTIONS, MacroAction
 from scbot.env.bridge import StepData
-from scbot.env.info import EpisodeInfo, StepInfo
+from scbot.env.info import GameSummary, StepInfo
 from scbot.env.observation import FEATURE_NAMES, to_vector
 from scbot.env.sc2_env import SC2EnvError
 from scbot.runner import StepRecord, run_episode, run_episodes, wilson_interval
@@ -93,11 +93,11 @@ class FakeEnv:
         terminated = self._decision == self.length
         if terminated:
             info["result"] = "Victory"
-            info["episode"] = self._episode_info()
+            info["game_summary"] = self._game_summary()
         obs = observation(minerals=100 * self._decision)
         self._sender.send(StepData(obs, reward, terminated, False, info))
 
-    def _episode_info(self) -> EpisodeInfo:
+    def _game_summary(self) -> GameSummary:
         return {
             "result": "Victory",
             "return": float(self.length),

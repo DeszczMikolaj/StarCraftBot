@@ -147,7 +147,7 @@ jest, ostatnią obserwację i ostatnią akcję.
 | [`advance`](../src/scbot/runner.py#L127-L134) | Odbiera jedną odpowiedź z gry (`collect`). Pierwsza odpowiedź po `reset` to tylko obserwacja początkowa. | Przy pierwszej nie ma jeszcze poprzedniej akcji, więc nie ma czego uczyć. |
 | [`observe`](../src/scbot/runner.py#L135-L144) | Przy uczeniu podaje agentowi przejście: poprzednia obserwacja, akcja, nagroda, nowa obserwacja, nowa maska, czy koniec, ile interwałów minęło. | To jest jedyne miejsce, w którym agent się uczy. |
 | [`on_step`](../src/scbot/runner.py#L145-L150) | Woła funkcję obserwatora (wypisywanie, zapis do `steps.jsonl`). | Logowanie jest poza pętlą, żeby jej nie zaśmiecać. |
-| [koniec gry](../src/scbot/runner.py#L153-L170) | Zamyka epizod u agenta, składa podsumowanie ([`EpisodeSummary`](../src/scbot/runner.py#L41-L46): `info["episode"]` plus numer epizodu, końcowe odczyty i czas) i oddaje wyniki w kolejności numerów, nawet jeśli późniejsza gra skończyła się wcześniej. Potem slot zaczyna następną grę. | Żeby numer w plikach wyników zawsze znaczył tę samą grę. |
+| [koniec gry](../src/scbot/runner.py#L153-L170) | Zamyka epizod u agenta, składa podsumowanie ([`EpisodeSummary`](../src/scbot/runner.py#L41-L46): `info["game_summary"]` plus numer epizodu, końcowe odczyty i czas) i oddaje wyniki w kolejności numerów, nawet jeśli późniejsza gra skończyła się wcześniej. Potem slot zaczyna następną grę. | Żeby numer w plikach wyników zawsze znaczył tę samą grę. |
 | [następna akcja](../src/scbot/runner.py#L172-L174) | Gra trwa: agent wybiera akcję, slot wysyła ją do gry i nie czeka na odpowiedź. | Dzięki temu inne gry mogą w tym czasie symulować. |
 | [pętla główna](../src/scbot/runner.py#L176-L204) | Startuje wszystkie sloty, a potem w kółko czeka (`wait`), aż którakolwiek gra odpowie, i ją obsługuje. | Gry odpowiadają w różnym tempie; nikt na nikogo nie czeka. |
 | [awaria gry](../src/scbot/runner.py#L193-L203) | Gdy gra padnie, ten sam epizod startuje od nowa. Po pięciu awariach bez żadnej ukończonej gry pętla się poddaje. | Pojedynczy błąd startu gry nie powinien zabijać godzinnego treningu. |
@@ -180,8 +180,8 @@ Wyjątek [`SC2EnvError`](../src/scbot/env/sc2_env.py#L29) oznacza zawsze to samo
 padła, przestała odpowiadać albo środowisko zostało użyte w złej kolejności.
 
 Co jest w `info`, mówi plik [`info.py`](../src/scbot/env/info.py):
-[`StepInfo`](../src/scbot/env/info.py#L44-L55) to klucze każdego kroku, a
-[`EpisodeInfo`](../src/scbot/env/info.py#L23-L41) to podsumowanie gry z ostatniego kroku.
+[`StepInfo`](../src/scbot/env/info.py#L44-L57) to klucze każdego kroku, a
+[`GameSummary`](../src/scbot/env/info.py#L23-L41) to podsumowanie gry z ostatniego kroku.
 Oba to `TypedDict`: w działaniu zwykły słownik, jakiego wymaga Gymnasium, ale mypy zna
 każdy klucz i typ jego wartości, więc literówkę w `info["action_mask"]` zgłosi przed
 uruchomieniem.
@@ -232,7 +232,7 @@ z python-sc2. Biblioteka sama woła jej metody: `on_start` raz, `on_step` co kro
 | [`_read_raw`](../src/scbot/env/bot.py#L149-L179) | Jedyne miejsce, w którym stan gry z python-sc2 zamienia się na słownik odczytów. Klucze to nazwy cech z przystanku 8. | Nowa cecha obserwacji wymaga jednej linii tutaj. |
 | [`_reward_counters`](../src/scbot/env/bot.py#L181-L199) | Zbiera narastające liczniki: wyszkolone jednostki oraz wartość zniszczeń i strat z punktacji gry. | Wejście dla nagrody (przystanek 9). |
 | [`_info`](../src/scbot/env/bot.py#L201-L210) | Buduje słownik `info` (`StepInfo`). | Klucze są zadeklarowane w `info.py` (przystanek 4); mypy zgłosi tu brakujący albo nadmiarowy klucz. Opis kluczy: [srodowisko.md](srodowisko.md#słownik-info). |
-| [`_episode_summary`](../src/scbot/env/bot.py#L212-L228) | Podsumowanie gry (`EpisodeInfo`) dołączane do ostatniego kroku. | Z niego powstaje wiersz w `episodes.csv`. |
+| [`_game_summary`](../src/scbot/env/bot.py#L212-L228) | Podsumowanie gry (`GameSummary`) dołączane do ostatniego kroku jako `info["game_summary"]`. | Z niego powstaje wiersz w `episodes.csv`. |
 
 Rzeczy, które łatwo przeoczyć:
 

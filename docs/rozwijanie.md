@@ -65,7 +65,10 @@ Uwagi:
 `SC2MacroEnv` jest zwykłym środowiskiem Gymnasium z przestrzenią `Box(24)` i
 `Discrete(8)`, więc można je podać bibliotece takiej jak Stable Baselines 3. Maskę akcji
 zwraca `env.action_masks()` w konwencji sb3-contrib (`MaskablePPO`). Przykład pętli:
-[`examples/random_gym_loop.py`](../examples/random_gym_loop.py).
+[`examples/random_gym_loop.py`](../examples/random_gym_loop.py). Podsumowanie gry jest
+w `info["game_summary"]`, więc klucz `info["episode"]` zostaje wolny dla wrapperów
+zbierających statystyki epizodów; z `RecordEpisodeStatistics` z Gymnasium sprawdza to test
+integracyjny.
 
 Tej drogi nie testowaliśmy jeszcze z żadną biblioteką uczenia. Stable Baselines 3 nie
 jest w zależnościach projektu; dodanie opisuje [runbook 06](../runbooks/06-testy-i-zaleznosci.md).

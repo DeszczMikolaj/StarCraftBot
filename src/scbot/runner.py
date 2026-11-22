@@ -14,7 +14,7 @@ import numpy as np
 
 from scbot.agents.base import Agent
 from scbot.env.bridge import StepData
-from scbot.env.info import EpisodeInfo, StepInfo
+from scbot.env.info import GameSummary, StepInfo
 from scbot.env.sc2_env import SC2EnvError
 
 WAIT_TIMEOUT_S = 0.5
@@ -38,8 +38,8 @@ class AsyncEnv(Protocol):
     def check_health(self) -> None: ...
 
 
-class EpisodeSummary(EpisodeInfo):
-    """What the episode loop reports for a finished game: ``info["episode"]`` plus these."""
+class EpisodeSummary(GameSummary):
+    """What the episode loop reports for a finished game: ``info["game_summary"]`` plus these."""
 
     episode: int  # episode number
     final_raw: dict[str, float]  # ``info["raw"]`` of the final step
@@ -154,7 +154,7 @@ def run_episodes(
             if learn:
                 agent.end_episode()
             summary: EpisodeSummary = {
-                **step.info["episode"],
+                **step.info["game_summary"],
                 "episode": slot.episode,
                 "final_raw": step.info["raw"],
                 "wall_seconds": time.perf_counter() - slot.started,
@@ -214,7 +214,7 @@ def run_episode(
     replay_path: str | None = None,
     on_step: Callable[[StepRecord], None] | None = None,
 ) -> EpisodeSummary:
-    """Play one game and return its summary (``info["episode"]`` plus wall-clock time)."""
+    """Play one game and return its summary (``info["game_summary"]`` plus wall-clock time)."""
     summaries = run_episodes(
         [env],
         agent,

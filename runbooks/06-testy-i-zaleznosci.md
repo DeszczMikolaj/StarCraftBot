@@ -11,14 +11,14 @@ uv run pytest
 ```
 
 Testy integracyjne startują prawdziwą grę, więc uruchamia się je tam, gdzie jest
-zainstalowana. W Dockerze trwają około 40 sekund:
+zainstalowana. W Dockerze trwają około minuty:
 
 ```bash
 docker compose run --rm sc2 pytest -m sc2
 ```
 
 Te same testy działają na kliencie Windows z [runbooka 02](02-klient-windows.md). Trwają
-tam około 80 sekund i otwierają okna gry:
+tam około półtorej minuty i otwierają okna gry:
 
 ```bash
 uv run pytest -m sc2
@@ -30,7 +30,7 @@ uv run pytest -m sc2
 | `tests/test_reward.py` | Składniki nagrody i nagrodę końcową. |
 | `tests/test_qlearning.py` | Dyskretyzację, regułę aktualizacji Q, maski, epsilon, zapis i odczyt tablicy. |
 | `tests/test_agents_and_runner.py` | Agentów odniesienia, pętlę epizodów (także równoległą i po awarii gry), przedział Wilsona. |
-| `tests/test_env_integration.py` | Prawdziwą grę: stan początkowy, skutki akcji, limit czasu, powtórkę. |
+| `tests/test_env_integration.py` | Prawdziwą grę: stan początkowy, skutki akcji, limit czasu, powtórkę, zgodność z wrapperem `RecordEpisodeStatistics` z Gymnasium. |
 
 Uruchom testy integracyjne po każdej zmianie w `src/scbot/env/`.
 
@@ -91,7 +91,7 @@ Ustawienia są w `pyproject.toml`, w sekcji `[tool.mypy]`:
 | interfejs bez `implements` | `Protocol`: pasuje każda klasa, która ma wymienione metody | `AsyncEnv` w `runner.py`; pasują do niego `SC2MacroEnv` i testowy `FakeEnv` |
 | `enum` | `IntEnum` | `MacroAction` w `env/actions.py` |
 | `record` | `@dataclass(frozen=True)` | `EnvConfig` w `config.py`, `StepRecord` w `runner.py` |
-| `record`, ale pola czyta się kluczem-napisem | `TypedDict`: w działaniu zwykły `dict`, mypy zna klucze i typy wartości | `StepInfo` i `EpisodeInfo` w `env/info.py` |
+| `record`, ale pola czyta się kluczem-napisem | `TypedDict`: w działaniu zwykły `dict`, mypy zna klucze i typy wartości | `StepInfo` i `GameSummary` w `env/info.py` |
 | `@Nullable Integer` | `int \| None` | `seed: int \| None = None` |
 | `List<Integer>`, `Map<String, Double>` | `list[int]`, `dict[str, float]` | |
 | rzutowanie `(StepData) obj` | `cast(StepData, obj)` | odbiór odpowiedzi z procesu gry w `env/sc2_env.py` |
@@ -108,7 +108,7 @@ Dwie różnice, o których łatwo zapomnieć:
 
 - **Kluczy słowników, których klucze pochodzą z listy.** Same klucze `info` są
   sprawdzane (`StepInfo`), ale w środku `info["raw"]`, `info["reward_components"]`
-  i `info["episode"]["action_counts"]` to zwykłe `dict[str, float]` albo
+  i `info["game_summary"]["action_counts"]` to zwykłe `dict[str, float]` albo
   `dict[str, int]`: ich klucze to nazwy z `FEATURE_NAMES`, `REWARD_COMPONENTS`
   i `ACTION_NAMES`, a kod zwykle przechodzi po nich pętlą. Literówka w
   `info["raw"]["minerlas"]` wyjdzie dopiero w działaniu, jako `KeyError`. Tak samo

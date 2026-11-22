@@ -14,7 +14,7 @@ from scbot.config import EnvConfig
 from scbot.env.actions import ACTION_NAMES, NUM_ACTIONS, MacroAction
 from scbot.env.bridge import DecisionBridge, StepData
 from scbot.env.decision_points import decision_due
-from scbot.env.info import EpisodeInfo, StepInfo
+from scbot.env.info import GameSummary, StepInfo
 from scbot.env.macro import ArmyMode, MacroExecutor
 from scbot.env.observation import to_vector
 from scbot.env.reward import REWARD_COMPONENTS, RewardCounters, RewardTracker
@@ -77,7 +77,7 @@ class MacroBot(BotAI):
         truncated = result == "Tie"  # only the game time limit produces a tie here
         info = self._info(components, self._macro.available_actions())
         info["result"] = result
-        info["episode"] = self._episode_summary(result)
+        info["game_summary"] = self._game_summary(result)
         self._bridge.finish(
             StepData(
                 obs=to_vector(info["raw"]),
@@ -209,7 +209,7 @@ class MacroBot(BotAI):
             "decision": self._decisions,
         }
 
-    def _episode_summary(self, result: str) -> EpisodeInfo:
+    def _game_summary(self, result: str) -> GameSummary:
         score = self.state.score
         return {
             "result": result,
