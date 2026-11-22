@@ -43,7 +43,7 @@ docker compose run --rm sc2 python -m scbot.play --agent scripted --difficulty V
 | 1 | `src/scbot/play.py`, `cli_common.py` | Jak komenda zamienia się w konfigurację, agenta i jedną grę |
 | 2 | `src/scbot/config.py` | Wszystkie pokrętła środowiska w jednym miejscu |
 | 3 | `src/scbot/runner.py` | Pętlę „obserwacja → akcja → nagroda" i jej wersję dla wielu gier |
-| 4 | `src/scbot/env/sc2_env.py` | Co robią `reset()` i `step()` i jak pilnują procesu gry |
+| 4 | `src/scbot/env/sc2_env.py`, `info.py` | Co robią `reset()` i `step()`, co zwracają w `info` i jak pilnują procesu gry |
 | 5 | `src/scbot/env/worker.py` | Proces gry: start StarCraft II i rozmowa przez potok |
 | 6 | `src/scbot/env/bot.py` | Bota w grze: kiedy pyta o akcję i co wtedy wysyła |
 | 7 | `src/scbot/env/decision_points.py` | Regułę „czy teraz pytać agenta" |
@@ -64,8 +64,8 @@ Zaczynamy w chwili, gdy agent właśnie dostał obserwację.
 
 | Krok | Gdzie | Co się dzieje |
 |------|-------|---------------|
-| 1 | [wybór akcji](../src/scbot/runner.py#L161-L162) | Pętla epizodów pyta agenta o akcję (`agent.act`) i wysyła ją do środowiska (`step_async`). |
-| 2 | [`step_async`](../src/scbot/env/sc2_env.py#L119-L129) | Środowisko sprawdza akcję i wkłada do potoku komunikat `("action", n)`. |
+| 1 | [wybór akcji](../src/scbot/runner.py#L172-L173) | Pętla epizodów pyta agenta o akcję (`agent.act`) i wysyła ją do środowiska (`step_async`). |
+| 2 | [`step_async`](../src/scbot/env/sc2_env.py#L126-L136) | Środowisko sprawdza akcję i wkłada do potoku komunikat `("action", n)`. |
 | 3 | [`PipeBridge.decide`](../src/scbot/env/worker.py#L38-L43) | W procesie gry bot czekał na `recv()`. Dostaje numer akcji. |
 | 4 | [wykonanie akcji](../src/scbot/env/bot.py#L127-L135) | Bot zamienia numer na `MacroAction`, zapamiętuje chwilę decyzji i każe warstwie makro wykonać akcję. |
 | 5 | [`execute`](../src/scbot/env/macro.py#L192-L226) | Warstwa makro wybiera robotnika, miejsce budowy albo zmienia tryb armii. |
@@ -74,8 +74,8 @@ Zaczynamy w chwili, gdy agent właśnie dostał obserwację.
 | 8 | [`on_step`](../src/scbot/env/bot.py#L62-L68) | Co czwarty krok bot liczy maskę akcji i pyta regułę z przystanku 7, czy to punkt decyzyjny. |
 | 9 | [`_decide`](../src/scbot/env/bot.py#L109-L126) | Jeśli tak: liczy nagrodę od poprzedniej decyzji, czyta stan gry, pakuje wszystko w `StepData`. |
 | 10 | [`PipeBridge.decide`](../src/scbot/env/worker.py#L38-L43) | `StepData` idzie potokiem do procesu głównego, a bot znów czeka na akcję. |
-| 11 | [`collect`](../src/scbot/env/sc2_env.py#L142-L157) | Środowisko odbiera odpowiedź i oddaje ją jako wynik `step()`. |
-| 12 | [odbiór odpowiedzi](../src/scbot/runner.py#L121-L142) | Pętla epizodów przekazuje przejście agentowi (`agent.observe`). |
+| 11 | [`collect`](../src/scbot/env/sc2_env.py#L149-L164) | Środowisko odbiera odpowiedź i oddaje ją jako wynik `step()`. |
+| 12 | [odbiór odpowiedzi](../src/scbot/runner.py#L130-L151) | Pętla epizodów przekazuje przejście agentowi (`agent.observe`). |
 | 13 | [`observe`](../src/scbot/agents/qlearning.py#L176-L203) | Q-Learning poprawia jedną komórkę tablicy. Wracamy do kroku 1. |
 
 Między krokiem 7 a 9 może minąć od 1,43 s do 60 s czasu gry. Dlaczego nie jest to stały
@@ -91,12 +91,12 @@ Pliki: [`play.py`](../src/scbot/play.py), [`cli_common.py`](../src/scbot/cli_com
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`main`](../src/scbot/play.py#L50-L61) | Buduje parser opcji. Opcje środowiska i agenta są wspólne dla wszystkich skryptów, więc dodają je funkcje z `cli_common`. | Żeby `--difficulty` czy `--map` znaczyły to samo w `play`, `train_q` i `evaluate`. |
+| [`main`](../src/scbot/play.py#L51-L62) | Buduje parser opcji. Opcje środowiska i agenta są wspólne dla wszystkich skryptów, więc dodają je funkcje z `cli_common`. | Żeby `--difficulty` czy `--map` znaczyły to samo w `play`, `train_q` i `evaluate`. |
 | [`env_config_from_args`](../src/scbot/cli_common.py#L58-L68) | Zamienia opcje na obiekt `EnvConfig` (przystanek 2). | Dalej kod nie zna już argumentów, tylko konfigurację. |
 | [`build_agent`](../src/scbot/cli_common.py#L84-L91) | Tworzy agenta: losowego, skryptowego albo wczytuje tablicę Q z pliku. | Jedno miejsce, do którego dopisuje się nowe typy agentów. |
-| [`on_step`](../src/scbot/play.py#L72-L74) | Funkcja wołana po każdej decyzji. Tu wypisuje co dziesiątą. | Pętla epizodów nic nie drukuje sama; kto chce widzieć kroki, podaje taką funkcję. |
-| [`run_episode`](../src/scbot/play.py#L76-L88) | Tworzy środowisko, rozgrywa jedną grę, zawsze zamyka środowisko (`finally`). | Bez `close()` po błędzie zostałby osierocony proces gry. |
-| [`format_step`](../src/scbot/play.py#L37-L47) | Składa wiersz, który widzisz na ekranie, z `info["raw"]` i maski akcji. | To gotowa ściąga, jak czytać `info`. |
+| [`on_step`](../src/scbot/play.py#L73-L75) | Funkcja wołana po każdej decyzji. Tu wypisuje co dziesiątą. | Pętla epizodów nic nie drukuje sama; kto chce widzieć kroki, podaje taką funkcję. |
+| [`run_episode`](../src/scbot/play.py#L77-L89) | Tworzy środowisko, rozgrywa jedną grę, zawsze zamyka środowisko (`finally`). | Bez `close()` po błędzie zostałby osierocony proces gry. |
+| [`format_step`](../src/scbot/play.py#L38-L48) | Składa wiersz, który widzisz na ekranie, z `info["raw"]` i maski akcji. | To gotowa ściąga, jak czytać `info`. |
 
 **Sprawdź sam.** Uruchom `play` z `--print-every 1`. Zobaczysz każdą decyzję i to, że
 odstępy czasu gry między nimi są nierówne.
@@ -127,32 +127,32 @@ Plik: [`runner.py`](../src/scbot/runner.py). To tutaj spotykają się agent i ś
 Cała nauka i wszystkie decyzje dzieją się w tym jednym procesie.
 
 Pętla nie wymaga konkretnej klasy środowiska, tylko pięciu metod opisanych w
-[`AsyncEnv`](../src/scbot/runner.py#L23-L37). To `Protocol`, czyli odpowiednik
+[`AsyncEnv`](../src/scbot/runner.py#L24-L38). To `Protocol`, czyli odpowiednik
 interfejsu z Javy z jedną różnicą: klasa nie musi go jawnie implementować, wystarczy, że
 ma te metody. `SC2MacroEnv` je ma, a testy podstawiają w to miejsce atrapę `FakeEnv`.
 Zgodność sprawdza mypy ([runbook 06](../runbooks/06-testy-i-zaleznosci.md#typy)).
 
 Najpierw wersja dla jednej gry, bo jest tylko opakowaniem:
-[`run_episode`](../src/scbot/runner.py#L196-L218) woła `run_episodes` z jednym
+[`run_episode`](../src/scbot/runner.py#L207-L229) woła `run_episodes` z jednym
 środowiskiem i jednym epizodem.
 
-Właściwa pętla to [`run_episodes`](../src/scbot/runner.py#L67-L193). Każde środowisko
-dostaje „slot" ([`_Slot`](../src/scbot/runner.py#L53)), który pamięta, w której grze
+Właściwa pętla to [`run_episodes`](../src/scbot/runner.py#L76-L204). Każde środowisko
+dostaje „slot" ([`_Slot`](../src/scbot/runner.py#L62)), który pamięta, w której grze
 jest, ostatnią obserwację i ostatnią akcję.
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`start`](../src/scbot/runner.py#L101-L108) | Zaczyna grę w slocie: `reset_async` z ziarnem `seed + numer epizodu` i ewentualną ścieżką powtórki. | Ziarno zależne od numeru sprawia, że grę numer `n` da się odtworzyć. |
-| [`start_next`](../src/scbot/runner.py#L110-L116) | Przydziela slotowi kolejny numer epizodu albo wyłącza slot, gdy numery się skończyły. | Numeracja w kolejności startu. |
-| [`advance`](../src/scbot/runner.py#L118-L125) | Odbiera jedną odpowiedź z gry (`collect`). Pierwsza odpowiedź po `reset` to tylko obserwacja początkowa. | Przy pierwszej nie ma jeszcze poprzedniej akcji, więc nie ma czego uczyć. |
-| [`observe`](../src/scbot/runner.py#L126-L135) | Przy uczeniu podaje agentowi przejście: poprzednia obserwacja, akcja, nagroda, nowa obserwacja, nowa maska, czy koniec, ile interwałów minęło. | To jest jedyne miejsce, w którym agent się uczy. |
-| [`on_step`](../src/scbot/runner.py#L136-L141) | Woła funkcję obserwatora (wypisywanie, zapis do `steps.jsonl`). | Logowanie jest poza pętlą, żeby jej nie zaśmiecać. |
-| [koniec gry](../src/scbot/runner.py#L144-L159) | Zamyka epizod u agenta, składa podsumowanie i oddaje wyniki w kolejności numerów, nawet jeśli późniejsza gra skończyła się wcześniej. Potem slot zaczyna następną grę. | Żeby numer w plikach wyników zawsze znaczył tę samą grę. |
-| [następna akcja](../src/scbot/runner.py#L161-L163) | Gra trwa: agent wybiera akcję, slot wysyła ją do gry i nie czeka na odpowiedź. | Dzięki temu inne gry mogą w tym czasie symulować. |
-| [pętla główna](../src/scbot/runner.py#L165-L193) | Startuje wszystkie sloty, a potem w kółko czeka (`wait`), aż którakolwiek gra odpowie, i ją obsługuje. | Gry odpowiadają w różnym tempie; nikt na nikogo nie czeka. |
-| [awaria gry](../src/scbot/runner.py#L182-L192) | Gdy gra padnie, ten sam epizod startuje od nowa. Po pięciu awariach bez żadnej ukończonej gry pętla się poddaje. | Pojedynczy błąd startu gry nie powinien zabijać godzinnego treningu. |
+| [`start`](../src/scbot/runner.py#L110-L117) | Zaczyna grę w slocie: `reset_async` z ziarnem `seed + numer epizodu` i ewentualną ścieżką powtórki. | Ziarno zależne od numeru sprawia, że grę numer `n` da się odtworzyć. |
+| [`start_next`](../src/scbot/runner.py#L119-L125) | Przydziela slotowi kolejny numer epizodu albo wyłącza slot, gdy numery się skończyły. | Numeracja w kolejności startu. |
+| [`advance`](../src/scbot/runner.py#L127-L134) | Odbiera jedną odpowiedź z gry (`collect`). Pierwsza odpowiedź po `reset` to tylko obserwacja początkowa. | Przy pierwszej nie ma jeszcze poprzedniej akcji, więc nie ma czego uczyć. |
+| [`observe`](../src/scbot/runner.py#L135-L144) | Przy uczeniu podaje agentowi przejście: poprzednia obserwacja, akcja, nagroda, nowa obserwacja, nowa maska, czy koniec, ile interwałów minęło. | To jest jedyne miejsce, w którym agent się uczy. |
+| [`on_step`](../src/scbot/runner.py#L145-L150) | Woła funkcję obserwatora (wypisywanie, zapis do `steps.jsonl`). | Logowanie jest poza pętlą, żeby jej nie zaśmiecać. |
+| [koniec gry](../src/scbot/runner.py#L153-L170) | Zamyka epizod u agenta, składa podsumowanie ([`EpisodeSummary`](../src/scbot/runner.py#L41-L46): `info["episode"]` plus numer epizodu, końcowe odczyty i czas) i oddaje wyniki w kolejności numerów, nawet jeśli późniejsza gra skończyła się wcześniej. Potem slot zaczyna następną grę. | Żeby numer w plikach wyników zawsze znaczył tę samą grę. |
+| [następna akcja](../src/scbot/runner.py#L172-L174) | Gra trwa: agent wybiera akcję, slot wysyła ją do gry i nie czeka na odpowiedź. | Dzięki temu inne gry mogą w tym czasie symulować. |
+| [pętla główna](../src/scbot/runner.py#L176-L204) | Startuje wszystkie sloty, a potem w kółko czeka (`wait`), aż którakolwiek gra odpowie, i ją obsługuje. | Gry odpowiadają w różnym tempie; nikt na nikogo nie czeka. |
+| [awaria gry](../src/scbot/runner.py#L193-L203) | Gdy gra padnie, ten sam epizod startuje od nowa. Po pięciu awariach bez żadnej ukończonej gry pętla się poddaje. | Pojedynczy błąd startu gry nie powinien zabijać godzinnego treningu. |
 
-Na końcu pliku jest [`wilson_interval`](../src/scbot/runner.py#L221-L229), czyli
+Na końcu pliku jest [`wilson_interval`](../src/scbot/runner.py#L232-L240), czyli
 przedział ufności dla odsetka wygranych używany w ewaluacji.
 
 **Sprawdź sam.** Testy tego pliku nie potrzebują gry. Przeczytaj `FakeEnv`
@@ -166,18 +166,25 @@ o StarCraft. Jej zadanie to rozmowa z procesem gry i pilnowanie, żeby ten proce
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`__init__`](../src/scbot/env/sc2_env.py#L53-L63) | Deklaruje przestrzeń obserwacji (24 liczby) i akcji (8). Nie startuje gry. | Gra startuje dopiero przy pierwszym `reset`, więc samo utworzenie środowiska nic nie kosztuje. |
-| [`reset`](../src/scbot/env/sc2_env.py#L67-L76) i [`step`](../src/scbot/env/sc2_env.py#L78-L81) | Każde to dwie połowy: wyślij żądanie, odbierz odpowiedź. | Połowy są osobno dostępne dla pętli wielu gier. |
-| [`reset_async`](../src/scbot/env/sc2_env.py#L101-L117) | Porzuca grę w toku (jeśli jest), upewnia się, że proces gry działa, wysyła `("reset", {...})` i ustawia termin odpowiedzi. | Start gry trwa kilka sekund, stąd osobny, dłuższy limit czasu. |
-| [`step_async`](../src/scbot/env/sc2_env.py#L119-L129) | Sprawdza, czy wolno teraz wysłać akcję, i wysyła `("action", n)`. | Błędy użycia (akcja przed `reset`, dwie akcje pod rząd) mają dawać jasny komunikat. |
-| [`collect`](../src/scbot/env/sc2_env.py#L142-L157) | Czeka na odpowiedź, zapamiętuje, czy gra trwa, i zachowuje maskę akcji. | Stan „czy jesteśmy w grze" decyduje, co wolno zrobić potem. |
-| [`check_health`](../src/scbot/env/sc2_env.py#L159-L174) | Zgłasza błąd, jeśli proces gry umarł albo minął termin odpowiedzi. | Zawieszona gra nie może zawiesić treningu. |
-| [`_ensure_worker`](../src/scbot/env/sc2_env.py#L178-L188) | Tworzy potok i startuje proces gry (`worker_main`, przystanek 5). | Proces żyje przez wiele gier; nowy powstaje tylko po awarii. |
-| [`_receive`](../src/scbot/env/sc2_env.py#L198-L211) | Odpytuje potok co pół sekundy. Komunikat `("step", ...)` to wynik, każdy inny to błąd z procesu gry. | Błąd w kodzie bota wraca tu jako `SC2EnvError` z oryginalnym tracebackiem. |
-| [`_stop_worker`](../src/scbot/env/sc2_env.py#L213-L221) i [`_kill_process_tree`](../src/scbot/env/sc2_env.py#L224-L238) | Zabijają proces gry razem z uruchomionym przez niego StarCraft II. | Samo zabicie procesu Pythona zostawiłoby grę działającą w tle. |
+| [`__init__`](../src/scbot/env/sc2_env.py#L54-L64) | Deklaruje przestrzeń obserwacji (24 liczby) i akcji (8). Nie startuje gry. | Gra startuje dopiero przy pierwszym `reset`, więc samo utworzenie środowiska nic nie kosztuje. |
+| [`reset`](../src/scbot/env/sc2_env.py#L72-L81) i [`step`](../src/scbot/env/sc2_env.py#L83-L88) | Każde to dwie połowy: wyślij żądanie, odbierz odpowiedź. Zwracają `info` typu `StepInfo`. | Połowy są osobno dostępne dla pętli wielu gier. [Komentarz nad nimi](../src/scbot/env/sc2_env.py#L68-L70) wyjaśnia, dlaczego tylko te dwie metody w projekcie mają `type: ignore`. |
+| [`reset_async`](../src/scbot/env/sc2_env.py#L108-L124) | Porzuca grę w toku (jeśli jest), upewnia się, że proces gry działa, wysyła `("reset", {...})` i ustawia termin odpowiedzi. | Start gry trwa kilka sekund, stąd osobny, dłuższy limit czasu. |
+| [`step_async`](../src/scbot/env/sc2_env.py#L126-L136) | Sprawdza, czy wolno teraz wysłać akcję, i wysyła `("action", n)`. | Błędy użycia (akcja przed `reset`, dwie akcje pod rząd) mają dawać jasny komunikat. |
+| [`collect`](../src/scbot/env/sc2_env.py#L149-L164) | Czeka na odpowiedź, zapamiętuje, czy gra trwa, i zachowuje maskę akcji. | Stan „czy jesteśmy w grze" decyduje, co wolno zrobić potem. |
+| [`check_health`](../src/scbot/env/sc2_env.py#L166-L181) | Zgłasza błąd, jeśli proces gry umarł albo minął termin odpowiedzi. | Zawieszona gra nie może zawiesić treningu. |
+| [`_ensure_worker`](../src/scbot/env/sc2_env.py#L185-L195) | Tworzy potok i startuje proces gry (`worker_main`, przystanek 5). | Proces żyje przez wiele gier; nowy powstaje tylko po awarii. |
+| [`_receive`](../src/scbot/env/sc2_env.py#L205-L218) | Odpytuje potok co pół sekundy. Komunikat `("step", ...)` to wynik, każdy inny to błąd z procesu gry. | Błąd w kodzie bota wraca tu jako `SC2EnvError` z oryginalnym tracebackiem. |
+| [`_stop_worker`](../src/scbot/env/sc2_env.py#L220-L228) i [`_kill_process_tree`](../src/scbot/env/sc2_env.py#L231-L245) | Zabijają proces gry razem z uruchomionym przez niego StarCraft II. | Samo zabicie procesu Pythona zostawiłoby grę działającą w tle. |
 
-Wyjątek [`SC2EnvError`](../src/scbot/env/sc2_env.py#L28) oznacza zawsze to samo: gra
+Wyjątek [`SC2EnvError`](../src/scbot/env/sc2_env.py#L29) oznacza zawsze to samo: gra
 padła, przestała odpowiadać albo środowisko zostało użyte w złej kolejności.
+
+Co jest w `info`, mówi plik [`info.py`](../src/scbot/env/info.py):
+[`StepInfo`](../src/scbot/env/info.py#L44-L55) to klucze każdego kroku, a
+[`EpisodeInfo`](../src/scbot/env/info.py#L23-L41) to podsumowanie gry z ostatniego kroku.
+Oba to `TypedDict`: w działaniu zwykły słownik, jakiego wymaga Gymnasium, ale mypy zna
+każdy klucz i typ jego wartości, więc literówkę w `info["action_mask"]` zgłosi przed
+uruchomieniem.
 
 **Sprawdź sam.** Uruchom [`examples/random_gym_loop.py`](../examples/random_gym_loop.py).
 To 15 linii, które używają wyłącznie `reset`, `step` i `close`.
@@ -224,8 +231,8 @@ z python-sc2. Biblioteka sama woła jej metody: `on_start` raz, `on_step` co kro
 | [`on_end`](../src/scbot/env/bot.py#L70-L89) | Liczy nagrodę końcową, dokłada `result` i podsumowanie gry, oddaje ostatni krok mostowi. Remis oznacza limit czasu, więc `truncated`, a nie `terminated`. | Agent musi odróżnić koniec gry od ucięcia. |
 | [`_read_raw`](../src/scbot/env/bot.py#L149-L179) | Jedyne miejsce, w którym stan gry z python-sc2 zamienia się na słownik odczytów. Klucze to nazwy cech z przystanku 8. | Nowa cecha obserwacji wymaga jednej linii tutaj. |
 | [`_reward_counters`](../src/scbot/env/bot.py#L181-L199) | Zbiera narastające liczniki: wyszkolone jednostki oraz wartość zniszczeń i strat z punktacji gry. | Wejście dla nagrody (przystanek 9). |
-| [`_info`](../src/scbot/env/bot.py#L201-L210) | Buduje słownik `info`. | Lista kluczy jest w [srodowisko.md](srodowisko.md#słownik-info). |
-| [`_episode_summary`](../src/scbot/env/bot.py#L212-L228) | Podsumowanie gry dołączane do ostatniego kroku. | Z niego powstaje wiersz w `episodes.csv`. |
+| [`_info`](../src/scbot/env/bot.py#L201-L210) | Buduje słownik `info` (`StepInfo`). | Klucze są zadeklarowane w `info.py` (przystanek 4); mypy zgłosi tu brakujący albo nadmiarowy klucz. Opis kluczy: [srodowisko.md](srodowisko.md#słownik-info). |
+| [`_episode_summary`](../src/scbot/env/bot.py#L212-L228) | Podsumowanie gry (`EpisodeInfo`) dołączane do ostatniego kroku. | Z niego powstaje wiersz w `episodes.csv`. |
 
 Rzeczy, które łatwo przeoczyć:
 
@@ -445,15 +452,15 @@ z przystanku 3 woła raz.
 
 | Linie | Co się dzieje | Dlaczego |
 |-------|---------------|----------|
-| [`parse_args`](../src/scbot/train_q.py#L29-L74) | Opcje treningu, Q-Learningu, zapisu i środowiska. | Opis każdej jest w [runbooku 04](../runbooks/04-trening-q-learning.md). |
-| [nowy albo wznowiony](../src/scbot/train_q.py#L94-L115) | Z `--resume` wczytuje tablicę; bez niego odmawia nadpisania istniejącej. | Żeby nie stracić wytrenowanej tablicy przez pomyłkę w nazwie. |
-| [numeracja](../src/scbot/train_q.py#L117-L120) | Pierwszy epizod to następny po ostatnim zapisanym w `episodes.csv`. | Wznowiony trening kontynuuje numerację. |
-| [`config.json`](../src/scbot/train_q.py#L122-L135) | Zapisuje ustawienia środowiska, agenta i dyskretyzacji. | Żeby po miesiącu było wiadomo, na czym run był liczony. |
-| [`replay_path`](../src/scbot/train_q.py#L147-L150) | Co 50. gra dostaje ścieżkę powtórki. | |
-| [`on_step`](../src/scbot/train_q.py#L152-L154) | Co 10. decyzja trafia do `steps.jsonl`. | Surowe odczyty do późniejszej analizy. |
-| [`on_episode`](../src/scbot/train_q.py#L156-L170) | Po każdej grze: wiersz do CSV i TensorBoard, wiersz na ekran, zapis tablicy, co 25 gier checkpoint. | Tablica jest na dysku po każdej grze, więc przerwanie niczego nie traci. |
-| [`run_episodes`](../src/scbot/train_q.py#L172-L185) | Tworzy tyle środowisk, ile wynosi `--num-envs`, i oddaje sterowanie pętli epizodów. | |
-| [przerwanie](../src/scbot/train_q.py#L186-L192) | Ctrl+C zapisuje tablicę; środowiska są zamykane zawsze. | |
+| [`parse_args`](../src/scbot/train_q.py#L28-L73) | Opcje treningu, Q-Learningu, zapisu i środowiska. | Opis każdej jest w [runbooku 04](../runbooks/04-trening-q-learning.md). |
+| [nowy albo wznowiony](../src/scbot/train_q.py#L93-L114) | Z `--resume` wczytuje tablicę; bez niego odmawia nadpisania istniejącej. | Żeby nie stracić wytrenowanej tablicy przez pomyłkę w nazwie. |
+| [numeracja](../src/scbot/train_q.py#L116-L119) | Pierwszy epizod to następny po ostatnim zapisanym w `episodes.csv`. | Wznowiony trening kontynuuje numerację. |
+| [`config.json`](../src/scbot/train_q.py#L121-L134) | Zapisuje ustawienia środowiska, agenta i dyskretyzacji. | Żeby po miesiącu było wiadomo, na czym run był liczony. |
+| [`replay_path`](../src/scbot/train_q.py#L146-L149) | Co 50. gra dostaje ścieżkę powtórki. | |
+| [`on_step`](../src/scbot/train_q.py#L151-L153) | Co 10. decyzja trafia do `steps.jsonl`. | Surowe odczyty do późniejszej analizy. |
+| [`on_episode`](../src/scbot/train_q.py#L155-L169) | Po każdej grze: wiersz do CSV i TensorBoard, wiersz na ekran, zapis tablicy, co 25 gier checkpoint. | Tablica jest na dysku po każdej grze, więc przerwanie niczego nie traci. |
+| [`run_episodes`](../src/scbot/train_q.py#L171-L184) | Tworzy tyle środowisk, ile wynosi `--num-envs`, i oddaje sterowanie pętli epizodów. | |
+| [przerwanie](../src/scbot/train_q.py#L185-L191) | Ctrl+C zapisuje tablicę; środowiska są zamykane zawsze. | |
 
 W `run_logging.py`: [`EPISODE_COLUMNS`](../src/scbot/run_logging.py#L14) to kolumny
 `episodes.csv`, [`episode_row`](../src/scbot/run_logging.py#L39) składa jeden wiersz,
@@ -472,7 +479,7 @@ opisane wyżej.
 
 | Plik | Do czego | Najważniejsze miejsce |
 |------|----------|-----------------------|
-| [`evaluate.py`](../src/scbot/evaluate.py) | Seria gier bez uczenia i podsumowanie z przedziałem ufności | [`main`](../src/scbot/evaluate.py#L28) używa tej samej pętli co trening, z `learn=False` |
+| [`evaluate.py`](../src/scbot/evaluate.py) | Seria gier bez uczenia i podsumowanie z przedziałem ufności | [`main`](../src/scbot/evaluate.py#L27) używa tej samej pętli co trening, z `learn=False` |
 | [`report.py`](../src/scbot/report.py) | Tabela z przebiegu treningu w blokach gier | [`summarise_blocks`](../src/scbot/report.py#L24) |
 | [`doctor.py`](../src/scbot/doctor.py) | Diagnostyka środowiska | [`check_game`](../src/scbot/doctor.py#L93) i [`check_launch`](../src/scbot/doctor.py#L141) |
 

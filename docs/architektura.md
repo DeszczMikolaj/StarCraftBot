@@ -20,6 +20,7 @@ biorą się z decyzji, nie z jakości sterowania jednostkami.
 | `env/worker.py` | Proces gry: uruchamia mecze python-sc2 i rozmawia ze środowiskiem | Integracja API (Mikołaj) |
 | `env/bot.py` | `MacroBot`: bot python-sc2, który w punktach decyzyjnych pyta o akcję | Integracja API (Mikołaj) |
 | `env/bridge.py` | `StepData` i protokół wymiany decyzji | Integracja API (Mikołaj) |
+| `env/info.py` | Typy słownika `info` (`StepInfo`, `EpisodeInfo`) | Integracja API (Mikołaj) |
 | `env/decision_points.py` | Reguła, kiedy agent jest pytany o akcję | Integracja API (Mikołaj) |
 | `env/observation.py` | Lista cech i budowa wektora obserwacji | Obserwacje i nagrody (Robert) |
 | `env/reward.py` | Funkcja nagrody | Obserwacje i nagrody (Robert) |

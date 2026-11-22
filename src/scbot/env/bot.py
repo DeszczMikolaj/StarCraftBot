@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any
 
 import numpy as np
 from sc2.bot_ai import BotAI
@@ -15,6 +14,7 @@ from scbot.config import EnvConfig
 from scbot.env.actions import ACTION_NAMES, NUM_ACTIONS, MacroAction
 from scbot.env.bridge import DecisionBridge, StepData
 from scbot.env.decision_points import decision_due
+from scbot.env.info import EpisodeInfo, StepInfo
 from scbot.env.macro import ArmyMode, MacroExecutor
 from scbot.env.observation import to_vector
 from scbot.env.reward import REWARD_COMPONENTS, RewardCounters, RewardTracker
@@ -198,7 +198,7 @@ class MacroBot(BotAI):
             value_lost=float(value_lost),
         )
 
-    def _info(self, reward_components: dict[str, float], mask: np.ndarray) -> dict[str, Any]:
+    def _info(self, reward_components: dict[str, float], mask: np.ndarray) -> StepInfo:
         return {
             "raw": self._read_raw(),
             "action_mask": mask,
@@ -209,7 +209,7 @@ class MacroBot(BotAI):
             "decision": self._decisions,
         }
 
-    def _episode_summary(self, result: str) -> dict[str, Any]:
+    def _episode_summary(self, result: str) -> EpisodeInfo:
         score = self.state.score
         return {
             "result": result,

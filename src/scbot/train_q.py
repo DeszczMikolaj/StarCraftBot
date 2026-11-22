@@ -15,13 +15,12 @@ import json
 from collections import deque
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
 
 from scbot.agents.qlearning import QLearningConfig, TabularQAgent
 from scbot.cli_common import add_env_arguments, env_config_from_args
 from scbot.env.sc2_env import SC2MacroEnv
 from scbot.run_logging import RunLogger, episode_row
-from scbot.runner import StepRecord, run_episodes
+from scbot.runner import EpisodeSummary, StepRecord, run_episodes
 
 WINRATE_WINDOW = 20
 
@@ -153,7 +152,7 @@ def main() -> None:
         if args.log_steps_every and record.decision % args.log_steps_every == 0:
             logger.log_step(episode, record)
 
-    def on_episode(episode: int, summary: dict[str, Any]) -> None:
+    def on_episode(episode: int, summary: EpisodeSummary) -> None:
         epsilon = agent.epsilon_at(episode - 1)
         logger.log_episode(episode_row(episode, summary, epsilon, len(agent.q)))
         recent_wins.append(summary["result"] == "Victory")

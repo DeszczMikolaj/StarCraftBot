@@ -65,7 +65,8 @@ watch a game; measure in the container. See `runbooks/02-klient-windows.md`.
 ## Layout
 
 - `src/scbot/env/`: environment (`sc2_env.py`), game worker (`worker.py`), bot (`bot.py`),
-  scripted macro layer (`macro.py`), observation, reward.
+  scripted macro layer (`macro.py`), observation, reward, and the keys of the `info`
+  dict (`info.py`: `StepInfo`, `EpisodeInfo`; declare a new key there).
 - `src/scbot/agents/`: `Agent` interface, random and scripted reference agents,
   `TabularQAgent`.
 - `src/scbot/runner.py`: episode loop for one or many parallel games.

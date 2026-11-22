@@ -9,7 +9,7 @@ from typing import Any
 
 from scbot.env.actions import ACTION_NAMES
 from scbot.env.reward import REWARD_COMPONENTS
-from scbot.runner import StepRecord
+from scbot.runner import EpisodeSummary, StepRecord
 
 EPISODE_COLUMNS: tuple[str, ...] = (
     "episode",
@@ -37,7 +37,7 @@ EPISODE_COLUMNS: tuple[str, ...] = (
 
 
 def episode_row(
-    episode: int, summary: dict[str, Any], epsilon: float, q_states: int
+    episode: int, summary: EpisodeSummary, epsilon: float, q_states: int
 ) -> dict[str, Any]:
     final = summary["final_raw"]
     row: dict[str, Any] = {

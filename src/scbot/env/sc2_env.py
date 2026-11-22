@@ -18,6 +18,7 @@ from gymnasium import spaces
 from scbot.config import EnvConfig
 from scbot.env.actions import NUM_ACTIONS
 from scbot.env.bridge import StepData
+from scbot.env.info import StepInfo
 from scbot.env.observation import OBS_CLIP, OBS_DIM
 from scbot.env.worker import worker_main
 
@@ -38,7 +39,7 @@ class SC2MacroEnv(gym.Env):
       interval (``config.loops_per_interval`` game loops), longer when there was nothing
       to decide or the agent chose to wait (see ``info["intervals_elapsed"]``);
     * ``info["action_mask"]`` marks the actions that can be carried out right now,
-      ``info["raw"]`` holds the unscaled game readings.
+      ``info["raw"]`` holds the unscaled game readings; ``info.py`` lists every key.
 
     The game runs in a separate worker process that is started on the first ``reset``
     and reused for the following episodes. Call ``close`` when done.
@@ -64,9 +65,13 @@ class SC2MacroEnv(gym.Env):
 
     # ------------------------------------------------------------------ Gymnasium API
 
-    def reset(
+    # Gymnasium declares ``info`` as ``dict[str, Any]``. ``StepInfo`` is such a dict with
+    # known keys, but mypy does not count a TypedDict as a subtype of ``dict``, so the
+    # narrower return type needs ``type: ignore[override]``. Callers get ``StepInfo``.
+
+    def reset(  # type: ignore[override]
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[np.ndarray, StepInfo]:
         """Start a new game.
 
         ``options["replay_path"]``: when given, the game is saved there as an .SC2Replay.
@@ -75,7 +80,9 @@ class SC2MacroEnv(gym.Env):
         step = self.collect()
         return step.obs, step.info
 
-    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+    def step(  # type: ignore[override]
+        self, action: int
+    ) -> tuple[np.ndarray, float, bool, bool, StepInfo]:
         self.step_async(action)
         step = self.collect()
         return step.obs, step.reward, step.terminated, step.truncated, step.info

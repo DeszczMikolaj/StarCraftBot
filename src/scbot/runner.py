@@ -6,7 +6,7 @@ import math
 import sys
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from multiprocessing import connection as mp_connection
 from typing import Any, Protocol
 
@@ -14,6 +14,7 @@ import numpy as np
 
 from scbot.agents.base import Agent
 from scbot.env.bridge import StepData
+from scbot.env.info import EpisodeInfo, StepInfo
 from scbot.env.sc2_env import SC2EnvError
 
 WAIT_TIMEOUT_S = 0.5
@@ -37,6 +38,14 @@ class AsyncEnv(Protocol):
     def check_health(self) -> None: ...
 
 
+class EpisodeSummary(EpisodeInfo):
+    """What the episode loop reports for a finished game: ``info["episode"]`` plus these."""
+
+    episode: int  # episode number
+    final_raw: dict[str, float]  # ``info["raw"]`` of the final step
+    wall_seconds: float  # real time the game took
+
+
 @dataclass(frozen=True)
 class StepRecord:
     """One decision as seen by the episode loop (passed to the ``on_step`` callback)."""
@@ -45,8 +54,8 @@ class StepRecord:
     obs: np.ndarray
     action: int
     reward: float
-    info: dict[str, Any]  # info that came with ``obs`` (before the action)
-    next_info: dict[str, Any]  # info returned by the step
+    info: StepInfo  # info that came with ``obs`` (before the action)
+    next_info: StepInfo  # info returned by the step
 
 
 @dataclass
@@ -60,7 +69,7 @@ class _Slot:
     decision: int = 0
     action: int = 0
     obs: np.ndarray | None = None
-    info: dict[str, Any] = field(default_factory=dict)
+    info: StepInfo | None = None
     started: float = 0.0
 
 
@@ -75,8 +84,8 @@ def run_episodes(
     first_episode: int = 1,
     replay_path: Callable[[int], str | None] | None = None,
     on_step: Callable[[int, StepRecord], None] | None = None,
-    on_episode: Callable[[int, dict[str, Any]], None] | None = None,
-) -> list[dict[str, Any]]:
+    on_episode: Callable[[int, EpisodeSummary], None] | None = None,
+) -> list[EpisodeSummary]:
     """Play ``episodes`` games, spread over ``envs`` that simulate at the same time.
 
     Episodes are numbered ``first_episode, first_episode + 1, ...`` in the order they
@@ -94,8 +103,8 @@ def run_episodes(
     last_episode = first_episode + episodes - 1
     next_episode = first_episode
     next_to_report = first_episode
-    finished: dict[int, dict[str, Any]] = {}
-    reported: list[dict[str, Any]] = []
+    finished: dict[int, EpisodeSummary] = {}
+    reported: list[EpisodeSummary] = []
     failures = 0
 
     def start(slot: _Slot, episode: int) -> None:
@@ -122,7 +131,7 @@ def run_episodes(
         if slot.awaiting_first_step:
             slot.awaiting_first_step = False
         else:
-            assert slot.obs is not None
+            assert slot.obs is not None and slot.info is not None
             if learn:
                 agent.observe(
                     slot.obs,
@@ -131,7 +140,7 @@ def run_episodes(
                     step.obs,
                     step.info["action_mask"],
                     step.terminated,
-                    float(step.info.get("intervals_elapsed", 1.0)),
+                    step.info["intervals_elapsed"],
                 )
             if on_step is not None:
                 record = StepRecord(
@@ -144,10 +153,12 @@ def run_episodes(
         if step.terminated or step.truncated:
             if learn:
                 agent.end_episode()
-            summary = dict(step.info["episode"])
-            summary["episode"] = slot.episode
-            summary["final_raw"] = step.info["raw"]
-            summary["wall_seconds"] = time.perf_counter() - slot.started
+            summary: EpisodeSummary = {
+                **step.info["episode"],
+                "episode": slot.episode,
+                "final_raw": step.info["raw"],
+                "wall_seconds": time.perf_counter() - slot.started,
+            }
             finished[slot.episode] = summary
             while next_to_report in finished:
                 ordered = finished.pop(next_to_report)
@@ -202,7 +213,7 @@ def run_episode(
     seed: int | None = None,
     replay_path: str | None = None,
     on_step: Callable[[StepRecord], None] | None = None,
-) -> dict[str, Any]:
+) -> EpisodeSummary:
     """Play one game and return its summary (``info["episode"]`` plus wall-clock time)."""
     summaries = run_episodes(
         [env],

@@ -60,13 +60,20 @@ uv run mypy
 Sprawdza `src/`, `tests/`, `scripts/` i `examples/`. Poprawny wynik:
 
 ```text
-Success: no issues found in 37 source files
+Success: no issues found in 38 source files
 ```
 
-Przykład tego, co wyłapuje: wywołanie `env.step("ATTACK")` zamiast numeru akcji daje
+Przykłady tego, co wyłapuje. Wywołanie `env.step("ATTACK")` zamiast numeru akcji daje
 
 ```text
 <plik>:<linia>: error: Argument 1 to "step" of "SC2MacroEnv" has incompatible type "str"; expected "int"  [arg-type]
+```
+
+a literówka w kluczu `info`, np. `info["action_maks"]`:
+
+```text
+<plik>:<linia>: error: TypedDict "StepInfo" has no key "action_maks"  [typeddict-item]
+<plik>:<linia>: note: Did you mean "action_mask"?
 ```
 
 Ustawienia są w `pyproject.toml`, w sekcji `[tool.mypy]`:
@@ -84,10 +91,11 @@ Ustawienia są w `pyproject.toml`, w sekcji `[tool.mypy]`:
 | interfejs bez `implements` | `Protocol`: pasuje każda klasa, która ma wymienione metody | `AsyncEnv` w `runner.py`; pasują do niego `SC2MacroEnv` i testowy `FakeEnv` |
 | `enum` | `IntEnum` | `MacroAction` w `env/actions.py` |
 | `record` | `@dataclass(frozen=True)` | `EnvConfig` w `config.py`, `StepRecord` w `runner.py` |
+| `record`, ale pola czyta się kluczem-napisem | `TypedDict`: w działaniu zwykły `dict`, mypy zna klucze i typy wartości | `StepInfo` i `EpisodeInfo` w `env/info.py` |
 | `@Nullable Integer` | `int \| None` | `seed: int \| None = None` |
 | `List<Integer>`, `Map<String, Double>` | `list[int]`, `dict[str, float]` | |
 | rzutowanie `(StepData) obj` | `cast(StepData, obj)` | odbiór odpowiedzi z procesu gry w `env/sc2_env.py` |
-| `Object` | `Any`: wyłącza sprawdzanie dla tej wartości | `info: dict[str, Any]` |
+| `Object` | `Any`: wyłącza sprawdzanie dla tej wartości | `options: dict[str, Any]` w `reset` |
 
 Dwie różnice, o których łatwo zapomnieć:
 
@@ -98,14 +106,22 @@ Dwie różnice, o których łatwo zapomnieć:
 
 ### Czego mypy nie sprawdzi
 
-- **Kluczy słowników `info`.** To `dict[str, Any]` z kluczami-napisami (`"raw"`,
-  `"action_mask"`), więc literówka w kluczu wyjdzie dopiero w działaniu. Klucze są
-  opisane w [docs/srodowisko.md](../docs/srodowisko.md).
+- **Kluczy słowników, których klucze pochodzą z listy.** Same klucze `info` są
+  sprawdzane (`StepInfo`), ale w środku `info["raw"]`, `info["reward_components"]`
+  i `info["episode"]["action_counts"]` to zwykłe `dict[str, float]` albo
+  `dict[str, int]`: ich klucze to nazwy z `FEATURE_NAMES`, `REWARD_COMPONENTS`
+  i `ACTION_NAMES`, a kod zwykle przechodzi po nich pętlą. Literówka w
+  `info["raw"]["minerlas"]` wyjdzie dopiero w działaniu, jako `KeyError`. Tak samo
+  słowniki zapisywane do CSV i JSON (`run_logging.py`, `evaluate.py`).
 - **Kształtu tablic numpy.** Typ mówi „tablica", ale nie „wektor długości 24".
 - **Części właściwości python-sc2.** Właściwości z pamięcią podręczną na jedną klatkę gry
   (np. `expansion_locations_list`) mypy widzi jako typ `Never`, więc ich użycia nie
   sprawdza. W `env/macro.py` dwa takie miejsca mają `cast` przywracający zadeklarowany
   typ.
+
+Jedyne `type: ignore` w projekcie są przy `reset` i `step` w `env/sc2_env.py`. Gymnasium
+deklaruje tam `info` jako `dict[str, Any]`, a mypy nie uznaje `TypedDict` za podtyp
+`dict`, choć w działaniu nim jest. Komentarz nad tymi metodami opisuje to w kodzie.
 
 ## Dodanie lub aktualizacja biblioteki
 

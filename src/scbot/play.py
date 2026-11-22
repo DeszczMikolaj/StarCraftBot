@@ -8,6 +8,7 @@ Smoke test for the whole stack (game launch, observations, macro actions, reward
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 
 from scbot.cli_common import (
     add_agent_arguments,
@@ -99,7 +100,7 @@ def main() -> None:
         print(f"replay:        {args.replay}")
 
 
-def _format_dict(values: dict[str, float]) -> str:
+def _format_dict(values: Mapping[str, float]) -> str:
     return ", ".join(f"{key}={value:g}" for key, value in values.items())
 
 

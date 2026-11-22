@@ -237,8 +237,17 @@ wartość kolejnego stanu.
 Ostatni krok zwraca dodatkowo `info["result"]` i `info["episode"]` z podsumowaniem gry:
 wynik, suma nagród, liczba decyzji, czas gry, liczba użyć każdej akcji, liczba akcji
 niewykonanych, wynik punktowy gry, zebrane minerały, liczba wyszkolonych Marines i SCV.
+Pełna lista pól to `EpisodeInfo` w `src/scbot/env/info.py`. `runner.run_episodes`
+dokłada do niej numer epizodu, końcowe odczyty i czas rzeczywisty (`EpisodeSummary`
+w `runner.py`).
 
 ## Słownik `info`
+
+Klucze i typy są zadeklarowane w [`src/scbot/env/info.py`](../src/scbot/env/info.py):
+`StepInfo` dla każdego kroku, `EpisodeInfo` dla podsumowania gry. `reset` i `step`
+zwracają `StepInfo`, więc mypy zgłasza literówkę w kluczu albo zły typ wartości przed
+uruchomieniem ([runbook 06](../runbooks/06-testy-i-zaleznosci.md#typy)). W działaniu
+`info` jest zwykłym słownikiem, tak jak wymaga Gymnasium.
 
 | Klucz | Typ | Zawartość |
 |-------|-----|-----------|
@@ -249,7 +258,7 @@ niewykonanych, wynik punktowy gry, zebrane minerały, liczba wyszkolonych Marine
 | `game_loop` | `int` | Numer pętli gry |
 | `intervals_elapsed` | `float` | Interwały decyzyjne od poprzedniej decyzji |
 | `decision` | `int` | Numer decyzji w epizodzie |
-| `result`, `episode` | `str`, `dict` | Tylko w ostatnim kroku |
+| `result`, `episode` | `str`, `EpisodeInfo` | Tylko w ostatnim kroku |
 
 ## Konfiguracja
 

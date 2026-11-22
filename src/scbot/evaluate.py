@@ -13,7 +13,6 @@ import argparse
 import json
 from pathlib import Path
 from statistics import mean
-from typing import Any
 
 from scbot.cli_common import (
     add_agent_arguments,
@@ -22,7 +21,7 @@ from scbot.cli_common import (
     env_config_from_args,
 )
 from scbot.env.sc2_env import SC2MacroEnv
-from scbot.runner import run_episodes, wilson_interval
+from scbot.runner import EpisodeSummary, run_episodes, wilson_interval
 
 
 def main() -> None:
@@ -58,7 +57,7 @@ def main() -> None:
             return None
         return str(Path(args.replay_dir) / f"game{game:03d}.SC2Replay")
 
-    def on_episode(game: int, summary: dict[str, Any]) -> None:
+    def on_episode(game: int, summary: EpisodeSummary) -> None:
         print(
             f"game {game:3d}/{args.episodes} {summary['result']:<7} "
             f"return={summary['return']:+.3f} game={summary['game_minutes']:4.1f}min "

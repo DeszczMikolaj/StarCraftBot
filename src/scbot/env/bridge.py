@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
 
 import numpy as np
+
+from scbot.env.info import StepInfo
 
 
 @dataclass
@@ -16,7 +18,7 @@ class StepData:
     reward: float
     terminated: bool
     truncated: bool
-    info: dict[str, Any]
+    info: StepInfo  # keys and value types: see ``info.py``
 
 
 class DecisionBridge(Protocol):

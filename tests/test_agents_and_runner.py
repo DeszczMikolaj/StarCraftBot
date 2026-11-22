@@ -8,6 +8,7 @@ from scbot.agents.base import Agent
 from scbot.agents.simple import RandomAgent, ScriptedAgent
 from scbot.env.actions import NUM_ACTIONS, MacroAction
 from scbot.env.bridge import StepData
+from scbot.env.info import EpisodeInfo, StepInfo
 from scbot.env.observation import FEATURE_NAMES, to_vector
 from scbot.env.sc2_env import SC2EnvError
 from scbot.runner import StepRecord, run_episode, run_episodes, wilson_interval
@@ -80,16 +81,38 @@ class FakeEnv:
         self.connection, self._sender = mp.Pipe(duplex=False)
 
     def _answer(self, reward: float) -> None:
-        info = {
+        info: StepInfo = {
+            "raw": {"decision": float(self._decision)},
             "action_mask": np.ones(NUM_ACTIONS, dtype=bool),
-            "raw": {"decision": self._decision},
+            "reward_components": {},
+            "last_action_executed": True,
+            "game_loop": 32 * self._decision,
             "intervals_elapsed": 2.0 if self._decision else 0.0,
+            "decision": self._decision,
         }
         terminated = self._decision == self.length
         if terminated:
-            info["episode"] = {"result": "Victory", "return": float(self.length)}
+            info["result"] = "Victory"
+            info["episode"] = self._episode_info()
         obs = observation(minerals=100 * self._decision)
         self._sender.send(StepData(obs, reward, terminated, False, info))
+
+    def _episode_info(self) -> EpisodeInfo:
+        return {
+            "result": "Victory",
+            "return": float(self.length),
+            "reward_totals": {},
+            "decisions": self.length,
+            "invalid_actions": 0,
+            "game_minutes": 1.0,
+            "game_loop": 32 * self.length,
+            "action_counts": {},
+            "score": 0.0,
+            "collected_minerals": 0.0,
+            "spent_minerals": 0.0,
+            "marines_trained": 0,
+            "workers_trained": self.length,
+        }
 
     def reset_async(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
